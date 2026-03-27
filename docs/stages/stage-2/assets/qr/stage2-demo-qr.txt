@@ -1,0 +1,4 @@
+Stage 2 Demo QR Asset
+URL=https://gugu183412.github.io/SPAPP/?asin=B0BXJLTRSH&src=qr
+PNG=stage2-demo-qr.png
+SVG=stage2-demo-qr.svg

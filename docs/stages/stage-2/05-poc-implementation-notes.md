@@ -83,6 +83,8 @@ npm.cmd run verify:mobile -- --output docs/stages/stage-2/mobile-verification-re
 - 本地构建已通过
 - WebKit（iPhone 13）闭环验证已通过
 - Chromium（Pixel 7）中途退出埋点验证已通过
+- GitHub Pages 公开演示链接已发布：`https://gugu183412.github.io/SPAPP/?asin=B0BXJLTRSH&src=qr`
+- 阶段二二维码资产已生成，输出目录：`docs/stages/stage-2/assets/qr`
 
 ## 6. 当前限制
 

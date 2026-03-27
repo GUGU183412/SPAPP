@@ -10,9 +10,10 @@
 
 ## 2. 演示入口
 
-- Base URL: `http://127.0.0.1:4173/?asin=B0BXJLTRSH&src=qr`
+- Base URL: `https://gugu183412.github.io/SPAPP/?asin=B0BXJLTRSH&src=qr`
 - 首批 ASIN: `B0BXJLTRSH`
 - 建议演示模式：先演完整闭环，再演中途退出埋点
+- 二维码资产目录：`docs/stages/stage-2/assets/qr`
 
 ## 3. 准备步骤
 

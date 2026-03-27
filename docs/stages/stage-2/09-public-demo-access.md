@@ -12,9 +12,11 @@
 - GitHub Pages 发布工作流：已准备
 - 二维码生成脚本：已准备
 - GitHub CLI：已安装
-- GitHub 登录状态：当前机器尚未完成 `gh auth login`
-- 最终公开 URL：待连接 GitHub 远端仓库并完成 Pages 发布后回填
-- 正式二维码资产：待基于最终公开 URL 生成
+- GitHub 登录状态：已完成
+- GitHub 仓库：`https://github.com/GUGU183412/SPAPP`
+- GitHub Pages 已发布
+- 最终公开 URL：`https://gugu183412.github.io/SPAPP/?asin=B0BXJLTRSH&src=qr`
+- 正式二维码资产：已生成
 
 ## 3. 标准公开演示入口
 
@@ -24,9 +26,9 @@
 
 回填项：
 
-- GitHub 仓库地址：待补充
-- GitHub Pages 公开链接：待补充
-- 标准演示链接：待补充
+- GitHub 仓库地址：`https://github.com/GUGU183412/SPAPP`
+- GitHub Pages 公开链接：`https://gugu183412.github.io/SPAPP/`
+- 标准演示链接：`https://gugu183412.github.io/SPAPP/?asin=B0BXJLTRSH&src=qr`
 
 ## 4. GitHub Pages 发布说明
 
@@ -60,18 +62,14 @@
 - 本地构建通过
 - GitHub Pages 工作流文件已创建
 - 二维码生成脚本已创建
-- 示例 URL 下的脚本产物已验证可生成，正式资产需等待最终公开 URL
-- GitHub 账号授权尚未完成，因此公开发布仍处于阻塞状态
-- 公开访问验证：待 GitHub 远端仓库接通后完成
-- 二维码扫码验证：待最终公开 URL 生成后完成
+- GitHub Pages 公开链接已发布
+- 最终公开 URL 已验证返回 `HTTP 200`
+- 正式二维码资产已生成
+- 二维码内容已写入 `stage2-demo-qr.txt`
+- 手机扫码验证：待现场实机补充
 
 ## 7. 回填要求
 
 当 GitHub 远端仓库接通并完成正式发布后，需要回填以下信息：
 
-1. GitHub 仓库地址
-2. GitHub Pages URL
-3. 最终标准演示链接
-4. 二维码产物路径
-5. 公开访问验证结果
-6. 手机扫码验证结果
+1. 手机扫码验证结果
