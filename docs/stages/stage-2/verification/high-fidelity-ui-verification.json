@@ -1,0 +1,71 @@
+{
+  "executedAt": "2026-03-27T06:37:39.668Z",
+  "baseUrl": "http://127.0.0.1:4173/?asin=B0BXJLTRSH&src=qr",
+  "checks": [
+    {
+      "scenario": "closed_loop_unresolved_recovery",
+      "browser": "chromium",
+      "device": "iPhone 13",
+      "status": "passed",
+      "eventCount": 15,
+      "eventNames": [
+        "pwa_entry",
+        "sku_view",
+        "pwa_entry",
+        "sku_view",
+        "tutorial_start",
+        "step_view",
+        "step_complete",
+        "step_view",
+        "safety_trust_click",
+        "step_complete",
+        "step_view",
+        "step_complete",
+        "resolved_status",
+        "unresolved_reason_submit",
+        "step_view"
+      ],
+      "screenshots": {
+        "landing": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\landing-restored-check.png",
+        "step1": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\step1-restored-check.png",
+        "step2": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\step2-restored-check.png",
+        "step3": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\step3-restored-check.png",
+        "feedback": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\feedback-restored-check.png",
+        "unresolved": "F:\\Users\\Administrator\\Desktop\\SPAPP\\docs\\stages\\stage-2\\assets\\unresolved-restored-check.png"
+      }
+    },
+    {
+      "scenario": "mid_tutorial_dropout",
+      "browser": "chromium",
+      "device": "Pixel 7",
+      "status": "passed",
+      "eventCount": 13,
+      "eventNames": [
+        "pwa_entry",
+        "sku_view",
+        "pwa_entry",
+        "sku_view",
+        "tutorial_start",
+        "step_view",
+        "step_complete",
+        "step_view",
+        "dropout_step",
+        "pwa_entry",
+        "sku_view",
+        "pwa_entry",
+        "sku_view"
+      ],
+      "dropoutPayload": {
+        "asin": "B0BXJLTRSH",
+        "page": "step2",
+        "step_id": 2,
+        "step_name": "safety_check",
+        "completed_steps": 1,
+        "duration_ms": 218,
+        "resolved_state": null,
+        "selected_reason": null,
+        "note_present": false
+      }
+    }
+  ]
+}

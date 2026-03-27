@@ -1,18 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  CircleAlert,
-  DoorOpen,
-  Image,
-  Info,
-  ShieldCheck,
-  Wrench,
-  XCircle
-} from "lucide-react";
-
+import landingHtml from "./docs/ui-mockups/landing-page-v1.html?raw";
+import step1Html from "./docs/ui-mockups/step1-v2.html?raw";
+import step2Html from "./docs/ui-mockups/step2-v1.html?raw";
+import step3Html from "./docs/ui-mockups/step3-v2.html?raw";
+import feedbackHtml from "./docs/ui-mockups/feedback-v1.html?raw";
+import unresolvedHtml from "./docs/ui-mockups/unresolved-reason-v2.html?raw";
 type StepId = "landing" | "step1" | "step2" | "step3" | "feedback" | "unresolved";
 type TutorialStepId = "step1" | "step2" | "step3";
 type UnresolvedReason =
@@ -40,57 +33,7 @@ type TrackingEvent = {
   timestamp: string;
 };
 
-type GuideStep = {
-  id: TutorialStepId;
-  label: string;
-  eyebrow: string;
-  title: string;
-  body: string;
-  mediaTitle: string;
-  mediaSubtitle: string;
-};
-
-const GUIDE = {
-  asin: "B0BXJLTRSH",
-  landing: {
-    title: "3-step safety installation for your Door Anchor Strap",
-    body:
-      "Confirm the model, lock the buckle correctly, verify stitching trust, and place it safely on the hinge side before you start your first rehab set.",
-    cta: "Start 3-step safety guide"
-  },
-  steps: [
-    {
-      id: "step1",
-      label: "Step 1 of 3",
-      eyebrow: "Slip Prevention",
-      title: "Is it locked?",
-      body:
-        "Compare the wrong loading path against the correct locked position before you pull.",
-      mediaTitle: "Wrong vs right buckle loading",
-      mediaSubtitle: "This step is designed to eliminate the common slip error."
-    },
-    {
-      id: "step2",
-      label: "Step 2 of 3",
-      eyebrow: "Safety Proof",
-      title: "Why it is safe to trust",
-      body:
-        "Use close-up stitching proof and a clear load baseline to reduce safety anxiety.",
-      mediaTitle: "Industrial X-stitch close-up",
-      mediaSubtitle: "Confidence should come from proof, not from guesswork."
-    },
-    {
-      id: "step3",
-      label: "Step 3 of 3",
-      eyebrow: "Door Protection",
-      title: "Protect the door and place it on the hinge side",
-      body:
-        "Correct placement matters just as much as soft backing. Install on the hinge side and avoid the latch side.",
-      mediaTitle: "Zero-damage polymer backing",
-      mediaSubtitle: "Door protection and placement should be instantly clear."
-    }
-  ] satisfies GuideStep[]
-};
+const DEFAULT_ASIN = "B0BXJLTRSH";
 
 const REASONS: Record<
   UnresolvedReason,
@@ -131,7 +74,7 @@ const REASONS: Record<
 const STEP_INDEX: Record<TutorialStepId, number> = { step1: 1, step2: 2, step3: 3 };
 
 function getAsin() {
-  return new URLSearchParams(window.location.search).get("asin") || GUIDE.asin;
+  return new URLSearchParams(window.location.search).get("asin") || DEFAULT_ASIN;
 }
 
 function readStepFromHash(): StepId {
@@ -159,21 +102,14 @@ function getCompletedStepCount(step: StepId) {
 
 function createTracker() {
   const key = "spapp_poc_events";
-  const listeners = new Set<(events: TrackingEvent[]) => void>();
   const read = () => JSON.parse(window.localStorage.getItem(key) || "[]") as TrackingEvent[];
   const write = (events: TrackingEvent[]) => {
     window.localStorage.setItem(key, JSON.stringify(events));
-    listeners.forEach((listener) => listener(events));
   };
 
   return {
     track(name: TrackingEventName, payload: TrackingEvent["payload"]) {
       write([...read(), { name, payload, timestamp: new Date().toISOString() }]);
-    },
-    subscribe(listener: (events: TrackingEvent[]) => void) {
-      listeners.add(listener);
-      listener(read());
-      return () => listeners.delete(listener);
     },
     clear() {
       write([]);
@@ -183,18 +119,165 @@ function createTracker() {
 
 const tracker = createTracker();
 
+function withBridge(html: string, script: string) {
+  return html.replace("</body>", `<script>${script}</script></body>`);
+}
+
+const landingDoc = withBridge(
+  landingHtml,
+  `
+    (() => {
+      const post = (action, payload = {}) => parent.postMessage({ type: "spapp-ui-action", action, ...payload }, "*");
+      document.querySelectorAll('button').forEach((button) => {
+        const text = (button.textContent || "").toLowerCase();
+        if (text.includes("3-step safety") || text.includes("next")) {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            post("start");
+          });
+        }
+      });
+      document.querySelectorAll('a[href="#"]').forEach((link) => {
+        link.addEventListener("click", (event) => event.preventDefault());
+      });
+    })();
+  `
+);
+
+const step1Doc = withBridge(
+  step1Html,
+  `
+    (() => {
+      const post = (action) => parent.postMessage({ type: "spapp-ui-action", action }, "*");
+      document.querySelectorAll('button, div[class*="cursor-pointer"]').forEach((node) => {
+        const text = (node.textContent || "").trim().toLowerCase();
+        if (text.includes("back")) {
+          node.addEventListener("click", () => post("back"));
+        }
+        if (text.includes("next step")) {
+          node.addEventListener("click", () => post("next-step1"));
+        }
+      });
+    })();
+  `
+);
+
+const step2Doc = withBridge(
+  step2Html,
+  `
+    (() => {
+      const post = (action) => parent.postMessage({ type: "spapp-ui-action", action }, "*");
+      document.querySelector('[data-icon="close"]')?.addEventListener("click", () => post("back"));
+      document.querySelectorAll('button, div[class*="cursor-pointer"]').forEach((node) => {
+        const text = (node.textContent || "").trim().toLowerCase();
+        if (text.includes("back")) {
+          node.addEventListener("click", () => post("back"));
+        }
+        if (text.includes("next")) {
+          node.addEventListener("click", () => post("next-step2"));
+        }
+      });
+      document.querySelector("main section .relative.overflow-hidden")?.addEventListener("click", () => post("safety-proof"));
+    })();
+  `
+);
+
+const step3Doc = withBridge(
+  step3Html,
+  `
+    (() => {
+      const post = (action) => parent.postMessage({ type: "spapp-ui-action", action }, "*");
+      document.querySelector('[data-icon="close"]')?.addEventListener("click", () => post("back"));
+      document.querySelectorAll("button").forEach((node) => {
+        const text = (node.textContent || "").trim().toLowerCase();
+        if (text.includes("back")) {
+          node.addEventListener("click", () => post("back"));
+        }
+        if (text.includes("done")) {
+          node.addEventListener("click", () => post("next-step3"));
+        }
+      });
+    })();
+  `
+);
+
+const feedbackDoc = withBridge(
+  feedbackHtml,
+  `
+    (() => {
+      const post = (action, payload = {}) => parent.postMessage({ type: "spapp-ui-action", action, ...payload }, "*");
+      document.querySelectorAll("button").forEach((node) => {
+        const text = (node.textContent || "").trim().toLowerCase();
+        if (text.includes("back")) {
+          node.addEventListener("click", () => post("back"));
+        }
+        if (text.includes("yes")) {
+          node.addEventListener("click", () => post("resolved", { value: "yes" }));
+        }
+        if (text.includes("no, still slip")) {
+          node.addEventListener("click", () => post("resolved", { value: "no" }));
+        }
+      });
+    })();
+  `
+);
+
+const unresolvedDoc = withBridge(
+  unresolvedHtml,
+  `
+    (() => {
+      const post = (action, payload = {}) => parent.postMessage({ type: "spapp-ui-action", action, ...payload }, "*");
+      const reasonMap = {
+        "opt-1": "still_slips",
+        "opt-2": "not_sure_locked",
+        "opt-3": "stitching_safety",
+        "opt-4": "wrong_placement",
+        "opt-5": "door_damage_worry",
+        "opt-6": "door_not_fit"
+      };
+      document.querySelector("header button")?.addEventListener("click", () => post("back"));
+      document.querySelectorAll('input[name="reason"]').forEach((input) => {
+        input.addEventListener("change", () => post("reason-change", { reason: reasonMap[input.id] }));
+      });
+      const note = document.getElementById("other-note");
+      note?.addEventListener("input", () => post("note-change", { note: note.value }));
+      document.querySelectorAll("button").forEach((button) => {
+        const text = (button.textContent || "").trim().toLowerCase();
+        if (text.includes("submit and review")) {
+          button.addEventListener("click", (event) => {
+            event.preventDefault();
+            const checked = document.querySelector('input[name="reason"]:checked');
+            post("submit-unresolved", {
+              reason: checked ? reasonMap[checked.id] : null,
+              note: note ? note.value : ""
+            });
+          });
+        }
+      });
+    })();
+  `
+);
+
+function ScreenFrame({ doc, title }: { doc: string; title: string }) {
+  return (
+    <iframe
+      title={title}
+      className="screen-frame"
+      srcDoc={doc}
+      referrerPolicy="no-referrer"
+    />
+  );
+}
+
 const App = () => {
   const [asin] = useState(getAsin);
   const [currentStep, setCurrentStep] = useState<StepId>(readStepFromHash);
-  const [events, setEvents] = useState<TrackingEvent[]>([]);
   const [resolved, setResolved] = useState<"yes" | "no" | null>(null);
   const [selectedReason, setSelectedReason] = useState<UnresolvedReason | null>(null);
   const [note, setNote] = useState("");
   const [enteredAt, setEnteredAt] = useState<Record<string, number>>({});
   const [flowSubmitted, setFlowSubmitted] = useState(false);
   const dropoutTrackedRef = useRef(false);
-
-  useEffect(() => tracker.subscribe(setEvents), []);
 
   useEffect(() => {
     tracker.track("pwa_entry", {
@@ -228,6 +311,81 @@ const App = () => {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || data.type !== "spapp-ui-action") return;
+
+      if (data.action === "start") {
+        startTutorial();
+        return;
+      }
+      if (data.action === "back") {
+        goBack();
+        return;
+      }
+      if (data.action === "next-step1") {
+        completeStep("step1");
+        return;
+      }
+      if (data.action === "next-step2") {
+        completeStep("step2");
+        return;
+      }
+      if (data.action === "next-step3") {
+        completeStep("step3");
+        return;
+      }
+      if (data.action === "safety-proof") {
+        tracker.track("safety_trust_click", {
+          asin,
+          step_id: 2,
+          target_type: "stitching_proof_modal"
+        });
+        window.alert("PoC event logged: safety_trust_click");
+        return;
+      }
+      if (data.action === "resolved" && (data.value === "yes" || data.value === "no")) {
+        submitResolved(data.value);
+        return;
+      }
+      if (data.action === "reason-change" && data.reason) {
+        setSelectedReason(data.reason as UnresolvedReason);
+        return;
+      }
+      if (data.action === "note-change") {
+        setNote(typeof data.note === "string" ? data.note : "");
+        return;
+      }
+      if (data.action === "submit-unresolved") {
+        if (typeof data.note === "string") {
+          setNote(data.note);
+        }
+        if (data.reason) {
+          setSelectedReason(data.reason as UnresolvedReason);
+        }
+        const reason = (data.reason || selectedReason) as UnresolvedReason | null;
+        if (!reason) return;
+        const target = REASONS[reason].reviewTarget;
+        setFlowSubmitted(true);
+        tracker.track("unresolved_reason_submit", {
+          asin,
+          reason,
+          note_present: ((typeof data.note === "string" ? data.note : note).trim().length > 0),
+          recommended_review: target
+        });
+        if (target === "support") {
+          window.alert("Recommended next step: Contact support.");
+          return;
+        }
+        setCurrentStep(target);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [asin, note, selectedReason]);
 
   useEffect(() => {
     const onPageHide = () => {
@@ -292,286 +450,30 @@ const App = () => {
     setCurrentStep("unresolved");
   };
 
-  const submitUnresolved = () => {
-    if (!selectedReason) return;
-    const target = REASONS[selectedReason].reviewTarget;
-    setFlowSubmitted(true);
-    tracker.track("unresolved_reason_submit", {
-      asin,
-      reason: selectedReason,
-      note_present: note.trim().length > 0,
-      recommended_review: target
-    });
-    if (target === "support") {
-      window.alert("Recommended next step: Contact support.");
-      return;
-    }
-    setCurrentStep(target);
-  };
-
-  const step = GUIDE.steps.find((item) => item.id === currentStep);
-  const recommendation = selectedReason ? REASONS[selectedReason].reviewTarget : null;
-
   return (
     <>
       <style>{styles}</style>
-      <div className="app">
-        <header className="topbar">
-          <button className="icon-btn" onClick={goBack} disabled={currentStep === "landing"}>
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <div className="eyebrow">Door Anchor Guide</div>
-            <div className="top-title">
-              {currentStep === "landing"
-                ? "Ready to begin"
-                : currentStep === "feedback"
-                  ? "Tutorial complete"
-                  : currentStep === "unresolved"
-                    ? "Follow-up"
-                    : step?.label}
-            </div>
-          </div>
-          <div className="chip">{asin}</div>
-        </header>
-
-        <main className="layout">
-          {currentStep === "landing" && (
-            <section className="card hero">
-              <span className="eyebrow accent">Verified Hardware</span>
-              <h1>{GUIDE.landing.title}</h1>
-              <p>{GUIDE.landing.body}</p>
-              <div className="panel">
-                <div>
-                  <span className="label">Confirmed ASIN</span>
-                  <strong>{asin}</strong>
-                </div>
-                <CheckCircle2 size={28} />
-              </div>
-              <button className="primary" onClick={startTutorial}>
-                {GUIDE.landing.cta}
-                <ArrowRight size={18} />
-              </button>
-            </section>
-          )}
-
-          {step && (currentStep === "step1" || currentStep === "step2" || currentStep === "step3") && (
-            <section className="page-stack">
-              <section className="card">
-                <span className="eyebrow">{step.eyebrow}</span>
-                <h1>{step.title}</h1>
-                <p>{step.body}</p>
-              </section>
-
-              <section className="card">
-                <div className="split-head">
-                  <div>
-                    <strong>{step.mediaTitle}</strong>
-                    <p>{step.mediaSubtitle}</p>
-                  </div>
-                  {currentStep === "step2" ? (
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        tracker.track("safety_trust_click", {
-                          asin,
-                          step_id: 2,
-                          target_type: "stitching_proof_modal"
-                        });
-                        window.alert("PoC event logged: safety_trust_click");
-                      }}
-                    >
-                      <Image size={16} />
-                      Open proof
-                    </button>
-                  ) : null}
-                </div>
-
-                {currentStep === "step1" && (
-                  <div className="grid two">
-                    <div className="tone danger">
-                      <XCircle size={24} />
-                      <strong>Wrong loading</strong>
-                      <p>Rests above the teeth and can slip.</p>
-                    </div>
-                    <div className="tone success">
-                      <CheckCircle2 size={24} />
-                      <strong>Correct lock</strong>
-                      <p>Teeth grip the strap under tension.</p>
-                    </div>
-                  </div>
-                )}
-
-                {currentStep === "step2" && (
-                  <div className="grid two">
-                    <div className="tone neutral">
-                      <ShieldCheck size={24} />
-                      <strong>500 kg baseline</strong>
-                      <p>Use a clear load baseline to answer safety anxiety.</p>
-                    </div>
-                    <div className="tone success">
-                      <Info size={24} />
-                      <strong>Stop if damaged</strong>
-                      <p>Do not continue if the stitched area looks frayed or torn.</p>
-                    </div>
-                  </div>
-                )}
-
-                {currentStep === "step3" && (
-                  <div className="door-map">
-                    <div className="door-side hinge">Hinge</div>
-                    <div className="door-leaf" />
-                    <div className="door-side latch">Latch</div>
-                    <div className="door-marker">Install here</div>
-                  </div>
-                )}
-              </section>
-
-              <button className="primary sticky" onClick={() => completeStep(currentStep)}>
-                {currentStep === "step3" ? "Done, let's start!" : "Next"}
-                <ArrowRight size={18} />
-              </button>
-            </section>
-          )}
-
-          {currentStep === "feedback" && (
-            <section className="page-stack">
-              <section className="card">
-                <span className="eyebrow">Session Review</span>
-                <h1>Problem resolved?</h1>
-                <p>Select the answer that best matches what happened after the 3-step guide.</p>
-              </section>
-              <div className="grid two">
-                <button
-                  className={`decision success ${resolved === "yes" ? "selected" : ""}`}
-                  onClick={() => submitResolved("yes")}
-                >
-                  <CheckCircle2 size={40} />
-                  <strong>Yes</strong>
-                  <span>The setup feels secure and ready for use.</span>
-                </button>
-                <button
-                  className={`decision danger ${resolved === "no" ? "selected" : ""}`}
-                  onClick={() => submitResolved("no")}
-                >
-                  <CircleAlert size={40} />
-                  <strong>No, still not solved</strong>
-                  <span>I still need help with lock, safety, or placement.</span>
-                </button>
-              </div>
-            </section>
-          )}
-
-          {currentStep === "unresolved" && (
-            <section className="page-stack">
-              <section className="card">
-                <span className="eyebrow">Follow-up</span>
-                <h1>What is still not resolved?</h1>
-                <p>Select the issue that still feels wrong. We’ll guide you to the most relevant next step.</p>
-              </section>
-
-              <div className="stack">
-                {(Object.entries(REASONS) as Array<[UnresolvedReason, (typeof REASONS)[UnresolvedReason]]>).map(
-                  ([key, item]) => (
-                    <button
-                      key={key}
-                      className={`reason ${selectedReason === key ? "selected" : ""}`}
-                      onClick={() => setSelectedReason(key)}
-                    >
-                      <div>
-                        <strong>{item.title}</strong>
-                        <span>{item.body}</span>
-                      </div>
-                      <ArrowRight size={18} />
-                    </button>
-                  )
-                )}
-              </div>
-
-              {recommendation ? (
-                <div className={`banner ${recommendation === "support" ? "danger" : ""}`}>
-                  <Info size={16} />
-                  <span>
-                    Recommended next step:{" "}
-                    {recommendation === "step1" && "Review Step 1 - Lock check"}
-                    {recommendation === "step2" && "Review Step 2 - Safety check"}
-                    {recommendation === "step3" && "Review Step 3 - Door placement"}
-                    {recommendation === "support" && "Contact support"}
-                  </span>
-                </div>
-              ) : null}
-
-              <label className="field">
-                <span>Anything else?</span>
-                <textarea
-                  rows={3}
-                  value={note}
-                  placeholder="Add a short note if needed."
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </label>
-
-              <button className="primary sticky" disabled={!selectedReason} onClick={submitUnresolved}>
-                Submit and review
-                <ArrowRight size={18} />
-              </button>
-            </section>
-          )}
-        </main>
-
-        <aside className="console">
-          <div className="console-head">
-            <strong>PoC Event Log</strong>
-            <button className="text-btn" onClick={() => tracker.clear()}>
-              Clear
-            </button>
-          </div>
-          <div className="stack compact">
-            {events.length === 0 ? (
-              <p className="muted">No events yet.</p>
-            ) : (
-              events
-                .slice()
-                .reverse()
-                .map((event, index) => (
-                  <div className="event" key={`${event.timestamp}-${index}`}>
-                    <strong>{event.name}</strong>
-                    <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
-                    <code>{JSON.stringify(event.payload)}</code>
-                  </div>
-                ))
-            )}
-          </div>
-        </aside>
-      </div>
+      {currentStep === "landing" && <ScreenFrame doc={landingDoc} title="Landing" />}
+      {currentStep === "step1" && <ScreenFrame doc={step1Doc} title="Step 1" />}
+      {currentStep === "step2" && <ScreenFrame doc={step2Doc} title="Step 2" />}
+      {currentStep === "step3" && <ScreenFrame doc={step3Doc} title="Step 3" />}
+      {currentStep === "feedback" && <ScreenFrame doc={feedbackDoc} title="Feedback" />}
+      {currentStep === "unresolved" && <ScreenFrame doc={unresolvedDoc} title="Unresolved" />}
     </>
   );
 };
 
 const styles = `
-  :root{--primary:#000;--surface:#f8f9fa;--surface-low:#f3f4f5;--surface-card:#fff;--text:#191c1d;--muted:#44474e;--green:#006e24;--green-soft:#50ff71;--red:#ba1a1a;--red-soft:#ffdad6;--shadow:0 18px 40px rgba(25,28,29,.06)}
-  *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#fff 0%,var(--surface) 100%);color:var(--text);font-family:"Public Sans",sans-serif} button,textarea{font:inherit}
-  .app{min-height:100vh;padding-bottom:240px}.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;background:rgba(248,249,250,.92);backdrop-filter:blur(18px)}
-  .icon-btn,.chip,.card,.console,.decision,.reason,.banner{box-shadow:var(--shadow)} .icon-btn{height:48px;width:48px;border:none;border-radius:999px;background:#fff;display:grid;place-items:center}.icon-btn:disabled{opacity:.35}
-  .eyebrow{display:inline-flex;font-family:"Lexend",sans-serif;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--green)} .eyebrow.accent{padding:8px 12px;border-radius:999px;background:rgba(80,255,113,.18)}
-  .top-title{margin-top:6px;font-family:"Lexend",sans-serif;font-weight:800;letter-spacing:-.03em}.chip{padding:10px 14px;border-radius:999px;background:#fff;font-family:"Lexend",sans-serif;font-size:12px;font-weight:800;letter-spacing:.08em}
-  .layout{display:flex;justify-content:center;padding:12px 16px 0}.page-stack{width:min(100%,960px);display:flex;flex-direction:column;gap:20px}.card,.console{border-radius:28px;background:#fff;padding:28px}
-  h1{margin:12px 0;font-family:"Lexend",sans-serif;font-size:clamp(2.5rem,6.5vw,4.4rem);line-height:.95;letter-spacing:-.06em} p{color:var(--muted);line-height:1.7}
-  .panel{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 20px;margin:16px 0 8px;background:var(--surface-low);border-radius:22px}.label{display:block;margin-bottom:6px;color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.panel strong{font-family:"Lexend",sans-serif;font-size:1.35rem}
-  .primary,.secondary{border:none;display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:18px;font-family:"Lexend",sans-serif;font-weight:800}.primary{min-height:56px;width:100%;padding:16px 22px;background:linear-gradient(135deg,#000 0%,#2e3132 100%);color:#fff}.primary:disabled{opacity:.45}
-  .secondary{padding:12px 16px;background:var(--surface-low);color:var(--text)} .split-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.split-head strong{display:block;font-family:"Lexend",sans-serif;font-size:1.08rem}
-  .grid{display:grid;gap:18px}.grid.two{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.tone,.decision,.reason,.banner,.event{border-radius:22px;padding:22px}.tone,.decision,.reason{display:flex;gap:14px;align-items:flex-start;text-align:left}
-  .tone strong,.decision strong,.reason strong{font-family:"Lexend",sans-serif;font-size:1.3rem}.tone.success,.banner{background:rgba(80,255,113,.18);color:var(--green)} .tone.danger,.decision.danger,.banner.danger{background:var(--red-soft);color:#93000a}.tone.neutral{background:var(--surface-low)}
-  .decision{min-height:220px;flex-direction:column;justify-content:space-between}.decision.success{background:rgba(80,255,113,.34);color:var(--green)} .decision.selected{outline:3px solid rgba(0,0,0,.08)}
-  .door-map{position:relative;width:min(100%,360px);aspect-ratio:4/3;border-radius:28px;background:var(--surface-low);overflow:hidden;margin:0 auto}.door-leaf{position:absolute;top:50%;left:14%;width:68%;height:16px;border-radius:999px;background:var(--primary);transform:translateY(-50%) rotate(-12deg)}
-  .door-side{position:absolute;top:0;bottom:0;width:68px;display:flex;align-items:center;justify-content:center;font-family:"Lexend",sans-serif;font-size:.75rem;font-weight:800;text-transform:uppercase}.door-side.hinge{left:0;background:rgba(80,255,113,.18);color:var(--green)}.door-side.latch{right:0;background:var(--red-soft);color:var(--red)}
-  .door-marker{position:absolute;top:50%;left:84px;transform:translateY(-50%);padding:8px 12px;border-radius:999px;background:var(--green-soft);color:var(--green);font-family:"Lexend",sans-serif;font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
-  .stack{display:flex;flex-direction:column;gap:16px}.reason{justify-content:space-between;background:var(--surface-low)} .reason.selected{background:var(--primary);color:#fff}.reason.selected span{color:rgba(255,255,255,.78)}
-  .field{display:flex;flex-direction:column;gap:10px;color:var(--muted);font-family:"Lexend",sans-serif;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.field textarea{width:100%;border:none;border-radius:22px;background:#edeeef;padding:18px;resize:vertical;color:var(--text)}
-  .sticky{position:sticky;bottom:16px;z-index:5}.console{position:fixed;right:16px;bottom:16px;width:min(360px,calc(100vw - 32px));max-height:42vh;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);z-index:20}
-  .console-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;font-family:"Lexend",sans-serif}.text-btn{border:none;background:transparent;color:var(--muted);font-family:"Lexend",sans-serif;font-weight:700}
-  .compact{max-height:28vh;overflow:auto}.event strong,.event span{display:block;font-size:.8rem}.event span,.muted{color:var(--muted)} .event code{display:block;margin-top:8px;white-space:pre-wrap;word-break:break-word;font-size:.72rem}
-  @media (max-width:768px){.chip{display:none}.card,.console{padding:22px;border-radius:24px}.console{position:static;width:100%;max-height:none;margin:0 16px 24px}}
+  * { box-sizing: border-box; }
+  html, body, #root { margin: 0; min-height: 100%; background: #f8f9fa; }
+  body { font-family: "Public Sans", sans-serif; overflow: hidden; }
+  .screen-frame {
+    display: block;
+    width: 100%;
+    height: 100vh;
+    border: 0;
+    background: #f8f9fa;
+  }
 `;
 
 createRoot(document.getElementById("root")!).render(
@@ -579,3 +481,5 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+
+

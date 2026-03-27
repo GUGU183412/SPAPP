@@ -1,9 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { chromium, devices, webkit } from "playwright";
+import { chromium, devices } from "playwright";
 
 const baseUrl = process.env.STAGE2_BASE_URL || "http://127.0.0.1:4173/?asin=B0BXJLTRSH&src=qr";
+const screenshotDir = process.env.STAGE2_SCREENSHOT_DIR
+  ? path.resolve(process.cwd(), process.env.STAGE2_SCREENSHOT_DIR)
+  : null;
 const outputArgIndex = process.argv.indexOf("--output");
 const outputPath =
   outputArgIndex >= 0 && process.argv[outputArgIndex + 1]
@@ -16,8 +19,8 @@ function ensure(condition, message) {
   }
 }
 
-async function createPage(browserType, deviceName) {
-  const browser = await browserType.launch({ headless: true });
+async function createPage(deviceName) {
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     ...devices[deviceName]
   });
@@ -34,6 +37,70 @@ async function resetSession(page) {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.evaluate(() => window.localStorage.clear());
   await page.reload({ waitUntil: "networkidle" });
+  await waitForHash(page, "#landing");
+}
+
+async function waitForHash(page, hash) {
+  await page.waitForFunction((expected) => window.location.hash === expected, hash);
+}
+
+async function getCurrentFrame(page) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const frame = page.frames().find((candidate) => candidate !== page.mainFrame());
+    if (frame) {
+      try {
+        await frame.waitForLoadState("domcontentloaded", { timeout: 250 });
+        const hasBody = await frame.evaluate(() => Boolean(document.body));
+        if (hasBody) {
+          return frame;
+        }
+      } catch {
+        // Keep polling until the iframe swaps and stabilizes.
+      }
+    }
+
+    await page.waitForTimeout(100);
+  }
+
+  throw new Error("Unable to resolve the active UI iframe");
+}
+
+async function clickByText(page, targetText) {
+  const frame = await getCurrentFrame(page);
+  const clicked = await frame.evaluate((query) => {
+    const normalizedQuery = query.toLowerCase();
+    const candidates = [
+      ...document.querySelectorAll('button, div[class*="cursor-pointer"], label')
+    ];
+    const target = candidates.find((element) =>
+      (element.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+
+    if (!target) {
+      return null;
+    }
+
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return (target.textContent || "").replace(/\s+/g, " ").trim();
+  }, targetText);
+
+  ensure(Boolean(clicked), `Unable to find clickable text: ${targetText}`);
+  return clicked;
+}
+
+async function capture(page, name) {
+  if (!screenshotDir) return null;
+  const frame = await getCurrentFrame(page);
+  await frame.waitForFunction(() => (document.body?.innerText || "").trim().length > 20);
+  await page.waitForTimeout(250);
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  const filePath = path.join(screenshotDir, `${name}.png`);
+  await page.screenshot({ path: filePath, fullPage: true });
+  return filePath;
 }
 
 async function readEvents(page) {
@@ -45,27 +112,55 @@ function summarize(events) {
 }
 
 async function verifyClosedLoop() {
-  const { browser, page } = await createPage(webkit, "iPhone 13");
+  const { browser, page } = await createPage("iPhone 13");
+  const screenshots = {};
 
   try {
     await resetSession(page);
-    await page.getByRole("button", { name: /start 3-step safety guide/i }).click();
-    await page.getByRole("button", { name: /^next$/i }).click();
-    await page.getByRole("button", { name: /open proof/i }).click();
-    await page.getByRole("button", { name: /^next$/i }).click();
-    await page.getByRole("button", { name: /done, let'?s start!/i }).click();
-    await page.getByRole("button", { name: /no, still not solved/i }).click();
-    await page.getByRole("button", { name: /it still slips/i }).click();
-    await page.getByRole("button", { name: /submit and review/i }).click();
+    screenshots.landing = await capture(page, "landing-restored-check");
 
-    await page.waitForTimeout(300);
+    await clickByText(page, "3-step safety installation guide");
+    await waitForHash(page, "#step1");
+    screenshots.step1 = await capture(page, "step1-restored-check");
+
+    await clickByText(page, "next step");
+    await waitForHash(page, "#step2");
+    screenshots.step2 = await capture(page, "step2-restored-check");
+
+    const step2Frame = await getCurrentFrame(page);
+    await step2Frame.evaluate(() => {
+      document
+        .querySelector("main section .relative.overflow-hidden")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+
+    await clickByText(page, "next");
+    await waitForHash(page, "#step3");
+    screenshots.step3 = await capture(page, "step3-restored-check");
+
+    await clickByText(page, "done");
+    await waitForHash(page, "#feedback");
+    screenshots.feedback = await capture(page, "feedback-restored-check");
+
+    await clickByText(page, "no, still slip");
+    await waitForHash(page, "#unresolved");
+    screenshots.unresolved = await capture(page, "unresolved-restored-check");
+
+    await clickByText(page, "it still slips");
+    const unresolvedFrame = await getCurrentFrame(page);
+    await unresolvedFrame.locator("textarea").fill("Need another lock check");
+    await clickByText(page, "submit and review");
+    await waitForHash(page, "#step1");
 
     const events = await readEvents(page);
     const names = summarize(events);
 
     ensure(names.includes("pwa_entry"), "Closed loop missing pwa_entry");
     ensure(names.includes("tutorial_start"), "Closed loop missing tutorial_start");
-    ensure(names.filter((name) => name === "step_complete").length === 3, "Closed loop missing step_complete events");
+    ensure(
+      names.filter((name) => name === "step_complete").length === 3,
+      "Closed loop missing step_complete events"
+    );
     ensure(names.includes("safety_trust_click"), "Closed loop missing safety_trust_click");
     ensure(names.includes("resolved_status"), "Closed loop missing resolved_status");
     ensure(names.includes("unresolved_reason_submit"), "Closed loop missing unresolved_reason_submit");
@@ -78,11 +173,12 @@ async function verifyClosedLoop() {
 
     return {
       scenario: "closed_loop_unresolved_recovery",
-      browser: "webkit",
+      browser: "chromium",
       device: "iPhone 13",
       status: "passed",
       eventCount: events.length,
-      eventNames: names
+      eventNames: names,
+      screenshots
     };
   } finally {
     await browser.close();
@@ -90,12 +186,14 @@ async function verifyClosedLoop() {
 }
 
 async function verifyDropout() {
-  const { browser, context, page } = await createPage(chromium, "Pixel 7");
+  const { browser, context, page } = await createPage("Pixel 7");
 
   try {
     await resetSession(page);
-    await page.getByRole("button", { name: /start 3-step safety guide/i }).click();
-    await page.getByRole("button", { name: /^next$/i }).click();
+    await clickByText(page, "3-step safety installation guide");
+    await waitForHash(page, "#step1");
+    await clickByText(page, "next step");
+    await waitForHash(page, "#step2");
     await page.waitForTimeout(200);
     await page.goto("about:blank", { waitUntil: "load" });
 
