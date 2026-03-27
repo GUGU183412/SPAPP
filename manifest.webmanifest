@@ -1,0 +1,17 @@
+{
+  "name": "Door Anchor Guide",
+  "short_name": "Anchor Guide",
+  "start_url": "./?asin=B0BXJLTRSH&src=qr",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#000000",
+  "description": "Stage 2 PWA proof of concept for installation guidance and issue resolution.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

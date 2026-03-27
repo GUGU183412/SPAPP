@@ -1,0 +1,26 @@
+{
+  "name": "spapp-stage-2-poc",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "verify:mobile": "node scripts/verify-mobile-flow.mjs",
+    "generate:stage2-qr": "node scripts/generate-stage2-qr.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "playwright": "^1.58.2",
+    "qrcode": "^1.5.4",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700;800;900&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#e1e3e4",
+              "primary": "#000000",
+              "on-secondary-container": "#007326",
+              "on-tertiary": "#ffffff",
+              "on-background": "#191c1d",
+              "surface-bright": "#f8f9fa",
+              "on-secondary-fixed-variant": "#005319",
+              "on-tertiary-fixed-variant": "#93000d",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#edeeef",
+              "primary-fixed": "#d6e3ff",
+              "on-primary-fixed": "#001b3d",
+              "tertiary-container": "#410002",
+              "on-surface": "#191c1d",
+              "surface-variant": "#e1e3e4",
+              "on-surface-variant": "#44474e",
+              "inverse-surface": "#2e3132",
+              "surface-container-low": "#f3f4f5",
+              "outline-variant": "#c4c6cf",
+              "surface-tint": "#495f84",
+              "on-secondary-fixed": "#002106",
+              "on-tertiary-fixed": "#410002",
+              "tertiary-fixed": "#ffdad6",
+              "surface-dim": "#d9dadb",
+              "surface": "#f8f9fa",
+              "primary-fixed-dim": "#b1c7f2",
+              "inverse-primary": "#b1c7f2",
+              "on-primary-container": "#6f84ac",
+              "primary-container": "#001b3d",
+              "error": "#ba1a1a",
+              "surface-container-high": "#e7e8e9",
+              "outline": "#74777f",
+              "inverse-on-surface": "#f0f1f2",
+              "on-error-container": "#93000a",
+              "background": "#f8f9fa",
+              "on-tertiary-container": "#f1423c",
+              "secondary": "#006e24",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#2ae45b",
+              "secondary-fixed": "#6dff80",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "error-container": "#ffdad6",
+              "secondary-container": "#50ff71",
+              "tertiary": "#000000",
+              "on-primary": "#ffffff",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#31476b"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Public Sans"],
+              "label": ["Public Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kinetic-scroll::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-secondary-container selection:text-on-secondary-container overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-white dark:bg-black text-black dark:text-white docked full-width top-0 sticky z-50">
+<div class="flex items-center justify-between w-full px-6 py-4">
+<button class="hover:opacity-70 transition-opacity Active: scale-95 duration-100 flex items-center justify-center p-2">
+<span class="material-symbols-outlined text-2xl" data-icon="close">close</span>
+</button>
+<h1 class="font-['Lexend'] font-bold text-2xl uppercase tracking-tighter text-black dark:text-white">Step X of 3</h1>
+<div class="w-10"></div>
+</div>
+<div class="bg-gray-100 dark:bg-gray-900 h-[1px]"></div>
+</header>
+<main class="h-[calc(100vh-160px)] overflow-y-auto kinetic-scroll px-6 pb-24">
+<div class="max-w-xl mx-auto pt-8">
+<section class="mb-12">
+<div class="relative aspect-square w-full bg-surface-container-low rounded-xl overflow-hidden shadow-sm group">
+<img alt="Resistance band knot demonstration" class="w-full h-full object-cover" data-alt="Looping video showing resistance band tying sequence" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4TReOdNcfHItCri0kvcTVsM9sv3SDXtSvS-CDwe-VpcwQ8YCg8lvdiOzVit0jqNuYv4w5RePkcdKOp75yslJcckTAW5Dj7YKdnZts0pkd2LtViY6AWmF_DO2LyDjHtyTvAYEmcPce-5tLasi-RS_7xmm0Yo1gh_8DYvEq0ve4Fq9dSdbnHbzUsaRNREKw6D4oy-MSrW9vd1VYwhq9By_JtoU5VrXB6DH1rfP_0hdjkeA5DMVp5FP1di6LGPk8uyTZJ9ef6Qfcqf4"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+<div class="absolute top-6 left-6">
+<span class="bg-primary text-on-primary font-headline text-xs px-4 py-2 rounded-full uppercase tracking-widest font-bold">Live Loop</span>
+</div>
+</div>
+</section>
+<section class="space-y-8">
+<div class="bg-surface-container-lowest p-8 rounded-xl border-l-4 border-primary">
+<h2 class="font-headline font-extrabold text-5xl md:text-6xl text-primary leading-tight mb-4 tracking-tighter">
+                        Tie a knot for double safety
+                    </h2>
+<p class="text-on-surface-variant text-xl leading-relaxed font-medium">
+                        Secure the resistance band by threading it through the anchor point and cinching it tightly. This ensures the band remains locked during high-intensity movement.
+                    </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-secondary-container/30 p-6 rounded-xl flex items-start gap-4">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<span class="block font-headline font-bold text-on-secondary-container">Check Tension</span>
+<p class="text-sm text-on-secondary-container/80">Pull firmly to confirm the knot is seated.</p>
+</div>
+</div>
+<div class="bg-surface-container p-6 rounded-xl flex items-start gap-4">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="lock">lock</span>
+<div>
+<span class="block font-headline font-bold">Safety Lock</span>
+<p class="text-sm text-on-surface-variant">Prevents accidental snapping or slippage.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 w-full flex justify-between items-center px-6 py-4 gap-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] z-50">
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors Active: scale-[0.98] duration-200">
+<span class="material-symbols-outlined text-2xl" data-icon="arrow_back">arrow_back</span>
+<span class="font-['Lexend'] font-medium text-sm">Back</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-xl px-8 py-3 w-full max-w-[240px] hover:opacity-90 transition-all Active: scale-[0.98] duration-200">
+<div class="flex items-center gap-2">
+<span class="font-['Lexend'] font-medium text-lg">Next</span>
+<span class="material-symbols-outlined text-2xl" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</button>
+</nav>
+<div class="hidden md:block fixed right-0 top-0 h-full w-2 bg-surface-container">
+<div class="bg-secondary-container w-full h-1/3 transition-all duration-500"></div>
+</div>
+</body></html>

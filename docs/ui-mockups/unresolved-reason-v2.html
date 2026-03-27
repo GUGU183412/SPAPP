@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Follow-up - Feedback</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#e1e3e4",
+              "background": "#f8f9fa",
+              "secondary-fixed-dim": "#2ae45b",
+              "primary-fixed-dim": "#b1c7f2",
+              "on-tertiary": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-dim": "#d9dadb",
+              "outline": "#74777f",
+              "on-tertiary-fixed-variant": "#93000d",
+              "on-secondary-fixed-variant": "#005319",
+              "on-secondary-fixed": "#002106",
+              "tertiary-fixed": "#ffdad6",
+              "tertiary-container": "#410002",
+              "surface": "#f8f9fa",
+              "on-tertiary-container": "#f1423c",
+              "surface-container-highest": "#e1e3e4",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "inverse-on-surface": "#f0f1f2",
+              "inverse-surface": "#2e3132",
+              "error-container": "#ffdad6",
+              "on-primary-fixed": "#001b3d",
+              "surface-container-low": "#f3f4f5",
+              "surface-container-lowest": "#ffffff",
+              "outline-variant": "#c4c6cf",
+              "on-surface": "#191c1d",
+              "secondary": "#006e24",
+              "secondary-container": "#50ff71",
+              "on-background": "#191c1d",
+              "primary-container": "#001b3d",
+              "surface-container": "#edeeef",
+              "on-error": "#ffffff",
+              "tertiary": "#000000",
+              "on-secondary-container": "#007326",
+              "on-primary-container": "#6f84ac",
+              "error": "#ba1a1a",
+              "primary": "#000000",
+              "primary-fixed": "#d6e3ff",
+              "on-surface-variant": "#44474e",
+              "surface-container-high": "#e7e8e9",
+              "surface-bright": "#f8f9fa",
+              "inverse-primary": "#b1c7f2",
+              "on-secondary": "#ffffff",
+              "surface-tint": "#495f84",
+              "secondary-fixed": "#6dff80",
+              "on-tertiary-fixed": "#410002",
+              "on-primary-fixed-variant": "#31476b",
+              "on-primary": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Public Sans"],
+              "label": ["Public Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Public Sans', sans-serif;
+        background-color: #f8f9fa;
+      }
+      .font-lexend { font-family: 'Lexend', sans-serif; }
+      
+      /* Dynamic Guidance Logic Mockup Styles */
+      .guidance-card { display: none; }
+      #opt-1:checked ~ .guidance-step-1,
+      #opt-2:checked ~ .guidance-step-1,
+      #opt-3:checked ~ .guidance-step-2,
+      #opt-4:checked ~ .guidance-step-3,
+      #opt-5:checked ~ .guidance-step-3,
+      #opt-6:checked ~ .guidance-support { display: flex; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl flex items-center px-8 h-20">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-black dark:text-white" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-lexend font-bold tracking-tight text-xl text-black dark:text-white">Follow-up</h1>
+</div>
+</header>
+<main class="pt-32 pb-60 px-6 max-w-3xl mx-auto">
+<!-- Header Section -->
+<section class="mb-12">
+<span class="font-lexend font-semibold text-xs uppercase tracking-[0.2em] text-secondary mb-3 block">Follow-up</span>
+<h2 class="font-lexend font-black text-4xl md:text-5xl leading-tight text-primary mb-4 tracking-tight">What is still not resolved?</h2>
+<p class="font-body text-body-lg text-on-surface-variant leading-relaxed opacity-80">Select the issue that still feels wrong. We’ll guide you to the most relevant step.</p>
+</section>
+<!-- Vertical List of High-Contrast Cards -->
+<div class="flex flex-col gap-6">
+<!-- Option 1: It still slips -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-1" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="release_alert">release_alert</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">It still slips</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">The strap still loosens or moves when I pull.</span>
+</div>
+</div>
+</label>
+<!-- Option 2: Not sure it is locked -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-2" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="lock_open">lock_open</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">I’m not sure it is locked</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">I still can’t confirm the buckle is fully engaged.</span>
+</div>
+</div>
+</label>
+<!-- Option 3: Stitching safety -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-3" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="construction">construction</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">I still worry about stitching safety</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">I’m not confident the stitched area is safe under tension.</span>
+</div>
+</div>
+</label>
+<!-- Option 4: Where to place -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-4" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="location_on">location_on</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">I’m not sure where to place it</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">I still don’t know the correct side or position on the door.</span>
+</div>
+</div>
+</label>
+<!-- Option 5: Damage door -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-5" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="door_front">door_front</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">I’m worried it may damage the door</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">I’m concerned it could leave marks or damage the surface.</span>
+</div>
+</div>
+</label>
+<!-- Option 6: Door does not fit -->
+<label class="group cursor-pointer">
+<input class="hidden peer" id="opt-6" name="reason" type="radio"/>
+<div class="flex items-start gap-6 p-8 rounded-xl bg-surface-container-low transition-all duration-300 peer-checked:bg-primary peer-checked:text-on-primary hover:bg-surface-container">
+<div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest peer-checked:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl" data-icon="error">error</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-lexend font-bold text-xl leading-none">My door does not fit</span>
+<span class="font-body text-on-surface-variant peer-checked:text-white/70">The door won’t close properly or the anchor doesn’t sit right.</span>
+</div>
+</div>
+</label>
+<!-- Hidden Guideline Mockups (Display logic in <style>) -->
+<div class="guidance-card guidance-step-1 mt-6 p-6 rounded-xl bg-secondary-container text-on-secondary-container items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+<span class="font-lexend font-bold text-sm">Recommended review: Step 1 - Lock check</span>
+</div>
+<div class="guidance-card guidance-step-2 mt-6 p-6 rounded-xl bg-secondary-container text-on-secondary-container items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+<span class="font-lexend font-bold text-sm">Recommended review: Step 2 - Safety check</span>
+</div>
+<div class="guidance-card guidance-step-3 mt-6 p-6 rounded-xl bg-secondary-container text-on-secondary-container items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+<span class="font-lexend font-bold text-sm">Recommended review: Step 3 - Door placement</span>
+</div>
+<div class="guidance-card guidance-support mt-6 p-6 rounded-xl bg-tertiary-container text-on-tertiary-container items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+<span class="material-symbols-outlined" data-icon="support_agent">support_agent</span>
+<span class="font-lexend font-bold text-sm">Recommended next step: Contact support</span>
+</div>
+<!-- Text Input Field -->
+<div class="mt-12 flex flex-col gap-3">
+<label class="font-lexend font-medium text-xs text-on-surface-variant uppercase tracking-widest px-1" for="other-note">Anything else?</label>
+<div class="relative">
+<textarea class="w-full p-6 rounded-xl bg-surface-container border-none focus:ring-2 focus:ring-primary/10 transition-all font-body text-base text-on-surface placeholder:text-on-surface-variant/40" id="other-note" placeholder="Add a short note if needed." rows="2"></textarea>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full flex flex-col items-center justify-center px-6 py-6 bg-white/95 dark:bg-black/95 backdrop-blur-md shadow-[0_-8px_40px_rgba(0,0,0,0.08)] z-50">
+<button class="flex items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-xl w-full max-w-lg py-5 h-16 shadow-2xl hover:opacity-90 active:scale-[0.98] transition-all duration-200">
+<span class="font-lexend font-bold text-sm uppercase tracking-[0.2em]">Submit and Review</span>
+</button>
+<div class="mt-4">
+<button class="font-lexend font-bold text-[10px] uppercase tracking-[0.2em] text-on-surface-variant hover:text-primary transition-colors">
+        Need help? Contact support
+      </button>
+</div>
+</nav>
+<!-- Support Section (Floating Aesthetic) - Kept for XL screens as specified in base but modified -->
+<div class="fixed right-10 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-6 w-64 p-8 bg-surface-container-low rounded-3xl">
+<div class="w-12 h-12 rounded-2xl bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</div>
+<h3 class="font-lexend font-bold text-xl">Need more help?</h3>
+<p class="font-body text-sm text-on-surface-variant">Our support team is available 24/7 to guide you through difficult installations.</p>
+<button class="font-lexend font-bold text-xs uppercase tracking-widest text-secondary text-left hover:underline">Contact Support</button>
+</div>
+</body></html>

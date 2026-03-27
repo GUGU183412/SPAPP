@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Feedback - Clinical Precision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800;900&amp;family=Public+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-highest": "#e1e3e4",
+                        "primary": "#000000",
+                        "on-secondary-container": "#007326",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#191c1d",
+                        "surface-bright": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#005319",
+                        "on-tertiary-fixed-variant": "#93000d",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#edeeef",
+                        "primary-fixed": "#d6e3ff",
+                        "on-primary-fixed": "#001b3d",
+                        "tertiary-container": "#410002",
+                        "on-surface": "#191c1d",
+                        "surface-variant": "#e1e3e4",
+                        "on-surface-variant": "#44474e",
+                        "inverse-surface": "#2e3132",
+                        "surface-container-low": "#f3f4f5",
+                        "outline-variant": "#c4c6cf",
+                        "surface-tint": "#495f84",
+                        "on-secondary-fixed": "#002106",
+                        "on-tertiary-fixed": "#410002",
+                        "tertiary-fixed": "#ffdad6",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "inverse-primary": "#b1c7f2",
+                        "on-primary-container": "#6f84ac",
+                        "primary-container": "#001b3d",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e7e8e9",
+                        "outline": "#74777f",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9fa",
+                        "on-tertiary-container": "#f1423c",
+                        "secondary": "#006e24",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#2ae45b",
+                        "secondary-fixed": "#6dff80",
+                        "tertiary-fixed-dim": "#ffb4ac",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#50ff71",
+                        "tertiary": "#000000",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#31476b"
+                    },
+                    fontFamily: {
+                        "headline": ["Lexend"],
+                        "body": ["Public Sans"],
+                        "label": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 sticky z-50 bg-white dark:bg-black">
+<div class="flex items-center justify-between w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-black dark:text-white cursor-pointer hover:opacity-70 transition-opacity">close</span>
+<h1 class="font-['Lexend'] font-bold text-2xl uppercase tracking-tighter text-black dark:text-white">Step X of 3</h1>
+</div>
+<div class="w-6"></div>
+</div>
+<div class="bg-gray-100 dark:bg-gray-900 h-[1px]"></div>
+</header>
+<main class="flex-grow flex flex-col items-center justify-center px-6 py-12 max-w-4xl mx-auto w-full">
+<div class="w-full text-center space-y-16">
+<section class="space-y-4">
+<span class="text-secondary font-headline font-bold uppercase tracking-widest text-sm bg-secondary-container/30 px-4 py-1 rounded-full">Session Review</span>
+<h2 class="font-headline font-black text-6xl md:text-8xl text-primary tracking-tighter leading-none">
+                    Problem <br/>Resolved?
+                </h2>
+<p class="text-on-surface-variant text-xl md:text-2xl max-w-lg mx-auto font-light leading-relaxed">
+                    Your assessment helps us calibrate the kinetic response for your next session.
+                </p>
+</section>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+<button class="group relative flex flex-col items-start justify-between p-8 min-h-[320px] bg-secondary-container text-on-secondary-fixed rounded-xl overflow-hidden hover:scale-[0.99] transition-transform duration-200 text-left">
+<div class="flex justify-between w-full items-start">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-headline font-bold text-lg opacity-40">01</span>
+</div>
+<div>
+<span class="block font-headline font-extrabold text-4xl mb-2">Yes</span>
+<span class="block text-lg opacity-80">The correction is stable and movement is fluid.</span>
+</div>
+<div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"></div>
+</button>
+<button class="group relative flex flex-col items-start justify-between p-8 min-h-[320px] bg-error-container text-on-error-container rounded-xl overflow-hidden hover:scale-[0.99] transition-transform duration-200 text-left">
+<div class="flex justify-between w-full items-start">
+<span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-headline font-bold text-lg opacity-40">02</span>
+</div>
+<div>
+<span class="block font-headline font-extrabold text-4xl mb-2">No, still slip</span>
+<span class="block text-lg opacity-80">Instability detected during high-velocity phase.</span>
+</div>
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+</button>
+</div>
+<div class="pt-8 opacity-50 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="text-xs font-medium uppercase tracking-widest">System will recalibrate based on selection</span>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 w-full flex justify-between items-center px-6 py-4 gap-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 z-50 shadow-[0_-8px_30px_rgb(0,0,0,0.04)]">
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-xl transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+<span class="font-['Lexend'] font-medium text-sm">Back</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-xl px-8 py-3 w-full max-w-[240px] opacity-40 cursor-not-allowed">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+<span class="font-['Lexend'] font-medium text-sm">Next</span>
+</button>
+</nav>
+<div class="fixed left-0 top-0 h-full w-1 bg-secondary-container opacity-30 z-0"></div>
+</body></html>

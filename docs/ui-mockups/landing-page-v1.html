@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Public+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-highest": "#e1e3e4",
+              "primary": "#000000",
+              "on-secondary-container": "#007326",
+              "on-tertiary": "#ffffff",
+              "on-background": "#191c1d",
+              "surface-bright": "#f8f9fa",
+              "on-secondary-fixed-variant": "#005319",
+              "on-tertiary-fixed-variant": "#93000d",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#edeeef",
+              "primary-fixed": "#d6e3ff",
+              "on-primary-fixed": "#001b3d",
+              "tertiary-container": "#410002",
+              "on-surface": "#191c1d",
+              "surface-variant": "#e1e3e4",
+              "on-surface-variant": "#44474e",
+              "inverse-surface": "#2e3132",
+              "surface-container-low": "#f3f4f5",
+              "outline-variant": "#c4c6cf",
+              "surface-tint": "#495f84",
+              "on-secondary-fixed": "#002106",
+              "on-tertiary-fixed": "#410002",
+              "tertiary-fixed": "#ffdad6",
+              "surface-dim": "#d9dadb",
+              "surface": "#f8f9fa",
+              "primary-fixed-dim": "#b1c7f2",
+              "inverse-primary": "#b1c7f2",
+              "on-primary-container": "#6f84ac",
+              "primary-container": "#001b3d",
+              "error": "#ba1a1a",
+              "surface-container-high": "#e7e8e9",
+              "outline": "#74777f",
+              "inverse-on-surface": "#f0f1f2",
+              "on-error-container": "#93000a",
+              "background": "#f8f9fa",
+              "on-tertiary-container": "#f1423c",
+              "secondary": "#006e24",
+              "on-error": "#ffffff",
+              "secondary-fixed-dim": "#2ae45b",
+              "secondary-fixed": "#6dff80",
+              "tertiary-fixed-dim": "#ffb4ac",
+              "error-container": "#ffdad6",
+              "secondary-container": "#50ff71",
+              "tertiary": "#000000",
+              "on-primary": "#ffffff",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#31476b"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Public Sans"],
+              "label": ["Public Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-secondary-container selection:text-on-secondary-container overflow-x-hidden">
+<header class="bg-white dark:bg-black docked full-width top-0 sticky z-50">
+<div class="flex items-center justify-between w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-black dark:text-white" data-icon="close">close</span>
+<h1 class="font-['Lexend'] font-bold text-2xl uppercase tracking-tighter text-black dark:text-white">Step X of 3</h1>
+</div>
+<div class="hidden md:flex gap-8">
+<nav class="font-['Lexend'] font-bold text-sm uppercase tracking-widest flex gap-6">
+<a class="text-black dark:text-white hover:opacity-70 transition-opacity" href="#">Product</a>
+<a class="text-gray-400 dark:text-gray-600 hover:opacity-70 transition-opacity" href="#">Safety</a>
+<a class="text-gray-400 dark:text-gray-600 hover:opacity-70 transition-opacity" href="#">Support</a>
+</nav>
+</div>
+</div>
+<div class="bg-gray-100 dark:bg-gray-900 h-[1px]"></div>
+</header>
+<main class="min-h-[calc(100vh-160px)] flex flex-col items-center">
+<section class="w-full max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-32">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-center">
+<div class="lg:col-span-7 flex flex-col space-y-8">
+<div class="space-y-2">
+<span class="inline-block px-3 py-1 bg-secondary-container text-on-secondary-container font-['Lexend'] font-bold text-xs uppercase tracking-[0.2em] rounded-full">
+                            Verified Hardware
+                        </span>
+<h2 class="font-['Lexend'] font-black text-6xl md:text-8xl leading-[0.9] tracking-tighter text-primary">
+                            WELCOME <br/>HOME.
+                        </h2>
+</div>
+<p class="text-on-surface-variant text-xl md:text-2xl leading-relaxed max-w-xl font-light">Your professional rehabilitation companion is ready. We will guide you through a precise and safe installation process.</p>
+<div class="bg-surface-container-low p-8 rounded-xl flex items-center justify-between group hover:bg-surface-container transition-colors duration-300">
+<div class="space-y-1">
+<p class="font-['Lexend'] text-xs font-bold text-on-surface-variant uppercase tracking-widest">Your professional rehabilitation companion is ready. We will guide you through a precise and safe installation process.</p>
+<p class="font-['Lexend'] text-3xl font-black text-primary">B0BXJLTRSH</p>
+</div>
+<div class="bg-secondary text-on-secondary p-3 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+</div>
+<div class="lg:col-span-5 relative">
+<div class="aspect-[4/5] bg-surface-container-highest rounded-[2rem] overflow-hidden relative group">
+<img alt="Professional Fitness Band" class="w-full h-full object-cover grayscale contrast-125 transition-transform duration-700 group-hover:scale-105" data-alt="Modern high-end professional fitness resistance band on clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbguxwoqTd9FIIAqCPWk7BCtXh97kWkgWp0Yjy6UZPFz_Xq6fR1t1AqA9IHBqi6Tg6oZE76vXxkCFAZj5FFySOjbkbPaBSxnQAi846Be1sf07DUKAHpOad1qbarkbyaAr7LwMat-zFmr4PMHQWI8RAvlUcofT14RJrxLrXoGXJmgpctT3xaCU_9yP3QpMnvVTgb9pZmBTzXI3B7y-OsIEW2IjLEhAf_5DqSkUVbnwq-Fio7ME9WzA9b8soEDBKDon_si4kX6MZYdk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-8 left-8 right-8 backdrop-blur-xl bg-white/10 border border-white/20 p-6 rounded-2xl">
+<p class="font-['Lexend'] text-white font-bold text-lg">Precision Series Elite</p>
+<p class="text-white/70 text-sm">Engineered for Rehabilitation</p>
+</div>
+</div>
+<div class="absolute -top-12 -right-12 w-48 h-48 bg-secondary-container/30 blur-[80px] rounded-full -z-10"></div>
+</div>
+</div>
+</section>
+<section class="w-full bg-primary py-24 px-6">
+<div class="max-w-4xl mx-auto text-center space-y-12">
+<h3 class="font-['Lexend'] text-white text-3xl md:text-5xl font-bold leading-tight">Ready to start your<br/>precision rehabilitation journey?</h3>
+<div class="flex flex-col items-center gap-6">
+<button class="bg-secondary-fixed text-on-secondary-fixed px-12 py-6 rounded-xl font-['Lexend'] font-black text-xl md:text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-4 shadow-2xl">3-Step Safety Installation Guide
+                        <span class="material-symbols-outlined text-3xl" data-icon="arrow_forward">arrow_forward</span></button>
+<p class="text-white/40 font-['Public_Sans'] text-sm tracking-widest uppercase">Estimated time: 3 Minutes</p>
+</div>
+</div>
+</section>
+</main>
+<footer class="fixed bottom-0 left-0 w-full flex justify-between items-center px-6 py-4 gap-4 bg-white/80 dark:bg-black/80 backdrop-blur-xl z-50 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] border-t border-gray-100 dark:border-gray-800">
+<button class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-200 Active: scale-[0.98] transition-transform">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+<span class="font-['Lexend'] font-medium text-sm">Back</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-xl px-8 py-3 w-full max-w-[200px] Active: scale-[0.98] transition-transform duration-200">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+<span class="font-['Lexend'] font-medium text-sm">Next</span>
+</button>
+</footer>
+<div class="h-24"></div>
+</body></html>
