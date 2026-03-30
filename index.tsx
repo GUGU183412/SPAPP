@@ -14,7 +14,6 @@ import {
   ScanLine,
   ShieldCheck,
   Sparkles,
-  TimerReset,
   Volleyball,
   Waves,
   XCircle
@@ -932,7 +931,7 @@ function App() {
             ) : (
               <div className="brand-mark">
                 <ScanLine size={16} />
-                <span>Stage 3 MVP</span>
+                <span>Training Assistant</span>
               </div>
             )}
           </div>
@@ -1191,56 +1190,45 @@ function App() {
             )}
           </section>
 
-          <aside className="side-panel">
-            <Card title="MVP 总体架构" icon={<Sparkles size={18} />}>
-              <div className="journey-monolith">
-                {ROUTES.map((item, index) => (
-                  <div key={item} className={`journey-step ${route === item ? "active" : ""}`}>
-                    <span>{index + 1}</span>
-                    <strong>{ROUTE_LABEL[item]}</strong>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card title="当前上下文" icon={<Clock3 size={18} />}>
+                              <aside className="side-panel">
+            <Card title="Your Session" icon={<Clock3 size={18} />}>
               <dl className="context-list">
                 <div>
-                  <dt>目标</dt>
-                  <dd>{selectedGoal?.title || "未选择"}</dd>
+                  <dt>Goal</dt>
+                  <dd>{selectedGoal?.title || "Not selected"}</dd>
                 </div>
                 <div>
-                  <dt>器材</dt>
+                  <dt>Equipment</dt>
                   <dd>
                     {equipment.length > 0
                       ? equipment
                           .map((item) => EQUIPMENT_OPTIONS.find((option) => option.id === item)?.title || item)
                           .join(" / ")
-                      : "未选择"}
+                      : "Not selected"}
                   </dd>
                 </div>
                 <div>
-                  <dt>推荐方案</dt>
-                  <dd>{plan?.title || "等待生成"}</dd>
+                  <dt>Plan</dt>
+                  <dd>{plan?.title || "Waiting for recommendation"}</dd>
                 </div>
                 <div>
-                  <dt>3 天反馈节奏</dt>
-                  <dd>流转壳 -&gt; 内容模板 -&gt; runtime -&gt; 联调验收</dd>
+                  <dt>Page</dt>
+                  <dd>{ROUTE_LABEL[route]}</dd>
                 </div>
               </dl>
             </Card>
 
-            <Card title="阶段三首批重点" icon={<TimerReset size={18} />}>
+            <Card title="Safety Notes" icon={<ShieldCheck size={18} />}>
               <ul className="list">
-                <li>瑜伽球模板库优先搭建</li>
-                <li>保留其他器材与无器材入口</li>
-                <li>2~3 周实现 MVP 主闭环</li>
-                <li>每 3 天反馈一次当前进度与偏差</li>
+                <li>Start with a comfortable range. You do not need to push for a big movement.</li>
+                <li>Stop right away if you feel sharp pain or unusual discomfort.</li>
+                <li>You can continue even if you have no equipment today.</li>
+                <li>Submit feedback after training so the next step can be adjusted for you.</li>
               </ul>
             </Card>
 
             {plan && (
-              <Card title="推荐摘要" icon={<ShieldCheck size={18} />}>
+              <Card title="Plan Summary" icon={<Sparkles size={18} />}>
                 <ul className="list compact">
                   {plan.summary.map((item) => (
                     <li key={item}>{item}</li>
@@ -1254,7 +1242,7 @@ function App() {
         <footer className="bottom-bar">
           <div className="bottom-left">
             <span className="footnote">当前页面：{ROUTE_LABEL[route]}</span>
-            <span className="footnote subtle">多目标 / 多器材 / 规则化推荐 / 跟练执行</span>
+            <span className="footnote subtle">Follow the current rhythm, then share how the session felt when you finish.</span>
           </div>
           <button
             className={`primary-button large ${canContinue ? "" : "disabled"}`}
@@ -1293,7 +1281,7 @@ function EntryScreen({
   return (
     <section className="entry-hero">
       <div className="entry-copy">
-        <span className="eyebrow">Stage 3 MVP</span>
+        <span className="eyebrow">Personal Session</span>
         <h2>从“我该练什么”开始，而不是从说明书开始。</h2>
         <p>
           这是阶段三正式开发后的第一版训练助手壳。用户先说目标、再说器材和状态，系统再给出一套可执行的训练建议。
@@ -1311,16 +1299,16 @@ function EntryScreen({
       </div>
       <div className="entry-card-stack">
         <div className="hero-card dark">
-          <strong>核心闭环</strong>
-          <p>目标 -&gt; 器材 -&gt; 推荐 -&gt; 跟练 -&gt; 反馈 -&gt; 下一步</p>
+          <strong>Start in one minute</strong>
+          <p>Choose your goal, tell us what equipment you have, and get a session you can begin right away.</p>
         </div>
         <div className="hero-card">
-          <strong>首批深挖方向</strong>
-          <p>瑜伽球优先，但仍支持其他器材和无器材路径。</p>
+          <strong>Made for first sessions</strong>
+          <p>If you want to move safely today, begin with the lighter option and build confidence step by step.</p>
         </div>
         <div className="hero-card accent">
-          <strong>进度节奏</strong>
-          <p>2~3 周实施窗口，每 3 天反馈一次关键进展。</p>
+          <strong>Feedback keeps guiding you</strong>
+          <p>When you finish, the app uses your feedback to suggest the most relevant next step.</p>
         </div>
       </div>
     </section>
