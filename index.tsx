@@ -922,27 +922,19 @@ function App() {
         <div className="ambient ambient-right" />
 
         <header className="topbar">
-          <div className="topbar-left">
-            {route !== "entry" ? (
-              <button className="ghost-button" onClick={goBack} type="button">
-                <ArrowLeft size={16} />
-                <span>返回</span>
-              </button>
-            ) : (
-              <div className="brand-mark">
-                <ScanLine size={16} />
-                <span>Training Assistant</span>
-              </div>
-            )}
-          </div>
+          {route !== "entry" ? (
+            <button className="ghost-button back-button" onClick={goBack} type="button">
+              <ArrowLeft size={16} />
+              <span>Back</span>
+            </button>
+          ) : (
+            <div className="topbar-spacer" />
+          )}
           <div className="topbar-center">
-            <span className="eyebrow">目标驱动训练助手</span>
+            <span className="eyebrow">Training Assistant</span>
             <h1>{ROUTE_LABEL[route]}</h1>
           </div>
-          <div className="context-chip">
-            <span>{context.productHint === "yoga-ball" ? "瑜伽球上下文" : "通用入口"}</span>
-            <strong>{context.asin}</strong>
-          </div>
+          <div className="topbar-chip">{context.asin}</div>
         </header>
 
         <main className="main-grid">
@@ -1189,61 +1181,9 @@ function App() {
               </SelectionScreen>
             )}
           </section>
-
-                              <aside className="side-panel">
-            <Card title="Your Session" icon={<Clock3 size={18} />}>
-              <dl className="context-list">
-                <div>
-                  <dt>Goal</dt>
-                  <dd>{selectedGoal?.title || "Not selected"}</dd>
-                </div>
-                <div>
-                  <dt>Equipment</dt>
-                  <dd>
-                    {equipment.length > 0
-                      ? equipment
-                          .map((item) => EQUIPMENT_OPTIONS.find((option) => option.id === item)?.title || item)
-                          .join(" / ")
-                      : "Not selected"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Plan</dt>
-                  <dd>{plan?.title || "Waiting for recommendation"}</dd>
-                </div>
-                <div>
-                  <dt>Page</dt>
-                  <dd>{ROUTE_LABEL[route]}</dd>
-                </div>
-              </dl>
-            </Card>
-
-            <Card title="Safety Notes" icon={<ShieldCheck size={18} />}>
-              <ul className="list">
-                <li>Start with a comfortable range. You do not need to push for a big movement.</li>
-                <li>Stop right away if you feel sharp pain or unusual discomfort.</li>
-                <li>You can continue even if you have no equipment today.</li>
-                <li>Submit feedback after training so the next step can be adjusted for you.</li>
-              </ul>
-            </Card>
-
-            {plan && (
-              <Card title="Plan Summary" icon={<Sparkles size={18} />}>
-                <ul className="list compact">
-                  {plan.summary.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-          </aside>
         </main>
 
         <footer className="bottom-bar">
-          <div className="bottom-left">
-            <span className="footnote">当前页面：{ROUTE_LABEL[route]}</span>
-            <span className="footnote subtle">Follow the current rhythm, then share how the session felt when you finish.</span>
-          </div>
           <button
             className={`primary-button large ${canContinue ? "" : "disabled"}`}
             type="button"
@@ -1453,8 +1393,10 @@ const styles = `
 
   .app-shell {
     position: relative;
+    max-width: 460px;
     min-height: 100vh;
-    padding: 32px;
+    margin: 0 auto;
+    padding: 14px 14px 24px;
     overflow: hidden;
   }
 
@@ -1482,7 +1424,7 @@ const styles = `
     background: rgba(0, 110, 36, 0.12);
   }
 
-  .topbar, .bottom-bar, .stage-panel, .side-panel > * {
+  .topbar, .bottom-bar, .stage-panel {
     position: relative;
     z-index: 1;
   }
@@ -1491,22 +1433,20 @@ const styles = `
   .bottom-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 18px 22px;
-    border-radius: 24px;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 20px;
     background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(24px);
     box-shadow: inset 0 0 0 1px var(--ghost-border), var(--shadow-soft);
   }
 
-  .topbar { margin-bottom: 28px; }
-  .topbar-left, .topbar-center, .context-chip { display: flex; align-items: center; gap: 12px; }
-  .topbar-center { flex: 1; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .topbar { margin-bottom: 16px; }
+  .topbar-center { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
   .topbar-center h1 {
     margin: 0;
     font-family: "Lexend", sans-serif;
-    font-size: 1.45rem;
+    font-size: 1.2rem;
     line-height: 1;
     letter-spacing: -0.04em;
   }
@@ -1521,61 +1461,73 @@ const styles = `
 
   .brand-mark,
   .context-chip,
-  .mini-chip {
+  .mini-chip,
+  .topbar-chip {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.88);
     box-shadow: inset 0 0 0 1px var(--ghost-border);
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
   }
 
-  .context-chip strong { color: var(--text); }
+  .topbar-chip {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .topbar-spacer {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+  }
+
+  .back-button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 10px 12px;
+  }
 
   .main-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.85fr);
-    gap: 24px;
-    margin-bottom: 24px;
+    display: block;
+    margin-bottom: 16px;
   }
 
   .stage-panel {
-    padding: 32px;
-    min-height: calc(100vh - 236px);
-    border-radius: 36px;
+    padding: 18px;
+    min-height: auto;
+    border-radius: 24px;
     background: var(--surface-low);
   }
-
-  .side-panel { display: grid; gap: 16px; align-content: start; }
 
   .screen-body,
   .entry-copy,
   .entry-card-stack {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 18px;
   }
 
   .screen-header h2,
   .entry-copy h2 {
     margin: 0 0 10px;
     font-family: "Lexend", sans-serif;
-    font-size: clamp(2.3rem, 4vw, 4.2rem);
-    line-height: 0.94;
+    font-size: clamp(2rem, 8vw, 2.8rem);
+    line-height: 0.96;
     letter-spacing: -0.05em;
-    max-width: 12ch;
+    max-width: 10ch;
   }
 
   .screen-header p,
   .entry-copy p {
     margin: 0;
-    max-width: 760px;
+    max-width: 100%;
     color: var(--muted);
-    font-size: 1.02rem;
-    line-height: 1.72;
+    font-size: 0.98rem;
+    line-height: 1.65;
   }
 
   .screen-content { display: grid; gap: 18px; }
@@ -1592,14 +1544,10 @@ const styles = `
     gap: 16px;
   }
 
-  .entry-hero {
-    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.95fr);
-    align-items: stretch;
-    min-height: 100%;
-  }
+  .entry-hero { grid-template-columns: 1fr; }
 
   .entry-copy { justify-content: center; }
-  .entry-actions, .session-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .entry-actions, .session-actions { display: flex; flex-direction: column; gap: 12px; }
 
   .hero-card,
   .goal-card,
@@ -1638,12 +1586,12 @@ const styles = `
   }
 
   .hero-card p { margin: 10px 0 0; line-height: 1.62; }
-  .goal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .goal-grid { grid-template-columns: 1fr; }
   .equipment-grid,
   .feedback-grid,
   .next-step-grid,
   .recommendation-grid,
-  .prep-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prep-grid { grid-template-columns: 1fr; }
 
   .goal-card,
   .equipment-card,
@@ -1832,7 +1780,7 @@ const styles = `
     color: var(--secondary);
   }
 
-  .session-layout { grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.8fr); }
+  .session-layout { grid-template-columns: 1fr; }
   .session-cue { font-size: 1.05rem; }
 
   .timer-ring {
@@ -2043,35 +1991,19 @@ const styles = `
   .context-list div { display: grid; gap: 4px; }
   .context-list dt { color: var(--muted); font-size: 0.86rem; }
   .context-list dd { margin: 0; font-weight: 600; line-height: 1.5; }
-  .bottom-left { display: flex; flex-direction: column; gap: 5px; }
-  .footnote { font-size: 0.92rem; color: var(--text); }
-  .footnote.subtle { color: var(--muted); }
 
-  @media (max-width: 1200px) {
-    .main-grid,
-    .entry-hero,
-    .session-layout,
-    .recommendation-grid,
-    .prep-grid,
-    .goal-grid,
-    .equipment-grid,
-    .feedback-grid,
-    .next-step-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .side-panel { order: -1; }
+  .bottom-bar {
+    position: sticky;
+    bottom: 12px;
+    justify-content: stretch;
   }
 
-  @media (max-width: 800px) {
-    .app-shell { padding: 16px; }
-    .topbar, .bottom-bar, .stage-panel { padding: 16px; border-radius: 22px; }
-    .topbar, .bottom-bar { flex-direction: column; align-items: stretch; }
-    .topbar-center { order: -1; }
-    .pill-option, .goal-card, .equipment-card, .option-card { width: 100%; }
-    .intake-options, .session-actions, .entry-actions { flex-direction: column; }
-    .primary-button, .secondary-button, .ghost-button { width: 100%; }
+  .bottom-bar .primary-button {
+    width: 100%;
   }
+
+  .pill-option, .goal-card, .equipment-card, .option-card { width: 100%; }
+  .primary-button, .secondary-button, .ghost-button { width: 100%; }
 `;
 
 createRoot(document.getElementById("root")!).render(
