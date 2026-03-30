@@ -1,10 +1,4 @@
-# Capability: poc-analytics-tracking
-
-## Purpose
-
-Define the minimum analytics event model for the current MVP so the team can evaluate entry, onboarding, recommendation, session runtime, feedback, and dropout behavior.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The PoC records the minimum funnel and progression events
 The system SHALL record the minimum analytics event set needed to evaluate the Stage 3 MVP funnel from entry through onboarding, recommendation, session start, session progression, completion, and post-session routing.
