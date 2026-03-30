@@ -1,11 +1,11 @@
 {
-  "name": "Door Anchor Guide",
-  "short_name": "Anchor Guide",
+  "name": "Shifu",
+  "short_name": "Shifu",
   "start_url": "./?asin=B0BXJLTRSH&src=qr",
   "display": "standalone",
   "background_color": "#f8f9fa",
   "theme_color": "#000000",
-  "description": "Stage 2 PWA proof of concept for installation guidance and issue resolution.",
+  "description": "Shifu mobile training assistant for guided sessions, feedback, and next-step support.",
   "icons": [
     {
       "src": "./icon.svg",
