@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ArrowRight, CheckCircle2, Clock3, Dumbbell, HeartPulse, Mic, MicOff, MonitorSmartphone, Pause, Play, ShieldCheck, Sparkles, Volleyball, Waves, XCircle } from "lucide-react";
 
@@ -91,7 +91,7 @@ const nextAction = (outcome: FeedbackOutcomeId): RecoveryActionId => outcome ===
 const toneClass = (tone: string) => tone === "positive" ? "feedback-card positive" : tone === "warning" ? "feedback-card warning" : tone === "caution" ? "feedback-card caution" : "feedback-card";
 const equipmentLabel = (id: EquipmentId) => id === "yoga_ball" ? "瑜伽球" : id === "resistance_band" ? "弹力带" : id === "yoga_mat" ? "瑜伽垫" : id === "dumbbell" ? "哑铃" : "无器材";
 
-function MirrorPreview({ enabled, stream, status, variant = "card", overlay }: { enabled: boolean; stream: MediaStream | null; status: "idle" | "loading" | "ready" | "error"; variant?: "card" | "session"; overlay?: React.ReactNode }) {
+const MirrorMedia = memo(function MirrorMedia({ enabled, stream, status, variant = "card" }: { enabled: boolean; stream: MediaStream | null; status: "idle" | "loading" | "ready" | "error"; variant?: "card" | "session" }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -122,13 +122,27 @@ function MirrorPreview({ enabled, stream, status, variant = "card", overlay }: {
     video.srcObject = null;
   }, [enabled, stream]);
 
+  return enabled
+    ? status === "error"
+      ? <div className={`mirror-empty ${variant}`}>摄像头权限不可用。你仍然可以继续标准跟练。</div>
+      : <video ref={videoRef} className={`mirror-video ${variant}`} autoPlay muted playsInline />
+    : <div className={`mirror-empty ${variant}`}>在准备页开启镜像预览后，这里会显示你的实时动作画面。</div>;
+});
+
+MirrorMedia.displayName = "MirrorMedia";
+
+function MirrorPreview({ enabled, stream, status, variant = "card", overlay }: { enabled: boolean; stream: MediaStream | null; status: "idle" | "loading" | "ready" | "error"; variant?: "card" | "session"; overlay?: React.ReactNode }) {
   const label = status === "ready" ? "已开启" : status === "loading" ? "启动中" : status === "error" ? "不可用" : "未开启";
-  const media = enabled ? status === "error" ? <div className={`mirror-empty ${variant}`}>摄像头权限不可用。你仍然可以继续标准跟练。</div> : <video ref={videoRef} className={`mirror-video ${variant}`} autoPlay muted playsInline /> : <div className={`mirror-empty ${variant}`}>在准备页开启镜像预览后，这里会显示你的实时动作画面。</div>;
   if (variant === "session") {
-    return <section className="mirror-stage"><div className="mirror-stage-media">{media}{overlay}</div><div className="mirror-stage-foot"><span className={`status ${status}`}>{label}</span></div></section>;
+    return <section className="mirror-stage"><div className="mirror-stage-media"><MirrorMedia enabled={enabled} stream={stream} status={status} variant="session" />{overlay}</div><div className="mirror-stage-foot"><span className={`status ${status}`}>{label}</span></div></section>;
   }
-  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">辅助预览</span><h3>镜像预览</h3></div><span className={`status ${status}`}>{label}</span></div>{media}</section>;
+  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">辅助预览</span><h3>镜像预览</h3></div><span className={`status ${status}`}>{label}</span></div><MirrorMedia enabled={enabled} stream={stream} status={status} variant="card" /></section>;
 }
+
+function ScreenWrap({ kicker, title, desc, children, compact = false, titleOnly = false }: { kicker?: string; title: string; desc: string; children: React.ReactNode; compact?: boolean; titleOnly?: boolean }) {
+  return <section className={`screen ${compact ? "compact-screen" : ""}`}><div className={`screen-header ${compact ? "compact" : ""} ${titleOnly ? "title-only" : ""}`}>{!titleOnly && kicker ? <span className="kicker">{kicker}</span> : null}<h2>{title}</h2>{!titleOnly ? <p>{desc}</p> : null}</div><div className="screen-body">{children}</div></section>;
+}
+
 function App() {
   const context = contextFromQuery();
   const [route, setRoute] = useState<RouteId>(routeFromHash);
@@ -149,7 +163,6 @@ function App() {
   const dropoutRef = useRef(false);
   const lastSpokenRef = useRef<string | null>(null);
   const mirrorStreamRef = useRef<MediaStream | null>(null);
-  const mirrorAnchorRef = useRef<HTMLVideoElement | null>(null);
   const plan = pickPlan(goal, equipment, intake);
   const currentStep = plan?.steps[stepIndex] || null;
   const completedWorkSteps = plan ? plan.steps.slice(0, stepIndex).filter((s) => s.type === "work").length : 0;
@@ -160,36 +173,6 @@ function App() {
   useEffect(() => { const onHash = () => setRoute(routeFromHash()); window.addEventListener("hashchange", onHash); return () => window.removeEventListener("hashchange", onHash); }, []);
   useEffect(() => { if (!sessionStarted || sessionPaused || !currentStep) return; const timer = window.setInterval(() => setRemainingSeconds((n) => { if (n <= 1) { window.clearInterval(timer); completeStep(); return 0; } return n - 1; }), 1000); return () => window.clearInterval(timer); }, [currentStep, sessionPaused, sessionStarted]);
   useEffect(() => { if (!voiceEnabled || !sessionStarted || !currentStep) return; if (lastSpokenRef.current === currentStep.id) return; lastSpokenRef.current = currentStep.id; tracker.track("voice_prompt_use", { route, enabled: true, step_id: currentStep.id }); if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(`${currentStep.type === "rest" ? "休息" : "开始"}，${currentStep.title}`); u.lang = "zh-CN"; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } }, [currentStep, route, sessionStarted, voiceEnabled]);
-  useEffect(() => {
-    const video = mirrorAnchorRef.current;
-    if (!video) return;
-    const stream = mirrorStreamRef.current;
-    const tryPlay = () => {
-      video.play().catch(() => {
-        // Keep silent; visible mirror preview will also attempt playback.
-      });
-    };
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "true");
-    video.setAttribute("webkit-playsinline", "true");
-    if (mirrorEnabled && stream && mirrorStatus === "ready") {
-      if (video.srcObject !== stream) {
-        video.srcObject = stream;
-      }
-      if (video.readyState >= 1) {
-        tryPlay();
-      }
-      video.addEventListener("loadedmetadata", tryPlay);
-      video.addEventListener("canplay", tryPlay);
-      return () => {
-        video.removeEventListener("loadedmetadata", tryPlay);
-        video.removeEventListener("canplay", tryPlay);
-      };
-    }
-    video.pause();
-    video.srcObject = null;
-  }, [mirrorEnabled, mirrorStatus, route]);
   useEffect(() => {
     if (mirrorEnabled) return;
     setMirrorStatus("idle");
@@ -304,20 +287,18 @@ function App() {
 
   const footerLabel = route === "entry" ? "开始训练设置" : route === "recommendation" ? "使用这套方案" : route === "prep" ? "开始跟练" : route === "feedback" ? "生成下一步" : route === "next-step" ? "保留当前建议" : "继续";
 
-  const ScreenWrap = ({ kicker, title, desc, children, compact = false, titleOnly = false }: { kicker?: string; title: string; desc: string; children: React.ReactNode; compact?: boolean; titleOnly?: boolean }) => <section className={`screen ${compact ? "compact-screen" : ""}`}><div className={`screen-header ${compact ? "compact" : ""} ${titleOnly ? "title-only" : ""}`}>{!titleOnly && kicker ? <span className="kicker">{kicker}</span> : null}<h2>{title}</h2>{!titleOnly ? <p>{desc}</p> : null}</div><div className="screen-body">{children}</div></section>;
-
   let body: React.ReactNode = null;
-  if (route === "entry") body = <ScreenWrap kicker="Shifu" title="今天的问题？" desc="先告诉我目标、手边器材和今天的状态，我会给你一套可以马上开始的训练方案。"><div className="hero-card"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>3 分钟内完成设置</h3><p>适合扫码进入后的首次体验。当前优先推荐瑜伽球模板，但不限制你只能用单一器材。</p></div></div></ScreenWrap>;
+  if (route === "entry") body = <ScreenWrap title="今天的问题？" desc="" titleOnly><div className="hero-card compact-hero"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>20 秒完成设置</h3><p>选目标、器材和状态，马上开始跟练。</p></div></div></ScreenWrap>;
   if (route === "goal") body = <ScreenWrap kicker="目标选择" title="先选今天目标" desc="先聚焦一个方向，我再给你方案。" compact titleOnly><div className="choice-grid">{goals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="选择可用器材" desc="可多选，先勾选你手边有的。" compact titleOnly><div className="choice-grid equipment-grid">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}>{item.priority ? <span className="tag card-tag">优先</span> : null}<span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "intake") body = <ScreenWrap kicker="快速确认" title="20 秒确认状态" desc="补全 4 项信息，我会给你更稳的方案。" compact titleOnly><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
   if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"} titleOnly>{plan ? <div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">预计时长</span><strong><Clock3 size={14} />{plan.estimatedMinutes} 分钟</strong></div><div className="recommendation-metric"><span className="metric-label">建议器材</span><strong>{equipmentLabel(plan.primaryEquipment)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">训练结构</span><div className="summary-list">{plan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>开始前提醒</strong><span>{plan.safetyNote}</span></div></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
-  if (route === "prep") body = <ScreenWrap kicker="开始前" title="开始前准备" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。" titleOnly>{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>跟练开始后自动打开前置摄像头。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section>{mirrorEnabled ? <section className="sub-card"><div className="sub-head"><div><span className="kicker">镜像模式</span><h3>将在跟练时开启</h3></div><span className="status loading">待启动</span></div><div className="mirror-empty card">已为本次训练准备镜像模式。开始跟练后会自动调用前置摄像头。</div></section> : null}</> : null}</ScreenWrap>;
+  if (route === "prep") body = <ScreenWrap kicker="开始前" title="开始前准备" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。" titleOnly>{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card support-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>跟练开始后自动打开前置摄像头。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section></> : null}</ScreenWrap>;
   if (route === "session") body = <ScreenWrap kicker="跟练中" title={currentStep ? currentStep.title : "跟练中"} desc={currentStep ? currentStep.cue : ""} compact titleOnly>{plan && currentStep ? mirrorEnabled ? <div className="session-layout session-layout-mirror"><MirrorPreview enabled={mirrorEnabled} stream={mirrorStreamRef.current} status={mirrorStatus} variant="session" overlay={<div className="session-overlay"><div className="session-overlay-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="session-overlay-timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="session-overlay-bottom"><p>{currentStep.cue}</p><div className="progress large overlay-progress"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div></div></div>} /><section className="sub-card runtime runtime-compact"><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions compact-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />结束</button></div></section></div> : <section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />提前结束</button></div></section> : null}</ScreenWrap>;
   if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮感觉如何？" desc="只要告诉我结果是否合适，我就能给出下一步建议。" titleOnly><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
   if (route === "next-step") body = <ScreenWrap kicker="下一步" title="下一步建议" desc="训练闭环不是结束，而是给你一个明确可继续的动作。" titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{nextStepCopy[nextStep.action].title}</h3><p>{nextStepCopy[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(nextStepCopy) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{nextStepCopy[action].badge}</span><div className="icon">{nextStepCopy[action].icon}</div><div className="copy"><strong>{nextStepCopy[action].title}</strong><p>{nextStepCopy[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
 
-  return <><style>{styles}</style><video ref={mirrorAnchorRef} className="camera-anchor" autoPlay muted playsInline /><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
+  return <><style>{styles}</style><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
 }
 
 const styles = `
@@ -375,17 +356,6 @@ button {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
-}
-
-.camera-anchor {
-  position: fixed;
-  width: 1px;
-  height: 1px;
-  top: -100px;
-  left: -100px;
-  opacity: 0.001;
-  pointer-events: none;
-  z-index: -1;
 }
 
 .phone-shell {
@@ -570,6 +540,10 @@ button {
   padding: 18px;
   border-radius: 22px;
   background: linear-gradient(180deg, #fff 0%, var(--tint) 100%);
+}
+
+.compact-hero {
+  padding: 16px 18px;
 }
 
 .hero-card.success {
@@ -975,6 +949,11 @@ button {
   background: var(--soft);
   border: 1px solid transparent;
   cursor: pointer;
+}
+
+.support-card {
+  display: grid;
+  gap: 16px;
 }
 
 .state {
