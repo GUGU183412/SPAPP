@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, Dumbbell, HeartPulse, Mic, MicOff, MonitorSmartphone, Pause, Play, ShieldCheck, Sparkles, Volleyball, Waves, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Dumbbell, HeartPulse, Mic, MicOff, MonitorSmartphone, Pause, Play, ShieldCheck, Sparkles, Volleyball, Waves, XCircle } from "lucide-react";
 
 type RouteId = "entry" | "goal" | "equipment" | "intake" | "recommendation" | "prep" | "session" | "feedback" | "next-step";
 type GoalId = "posture_relief" | "shoulder_relief" | "starter_tone";
@@ -186,7 +186,7 @@ function App() {
   const ScreenWrap = ({ kicker, title, desc, children, compact = false, titleOnly = false }: { kicker?: string; title: string; desc: string; children: React.ReactNode; compact?: boolean; titleOnly?: boolean }) => <section className={`screen ${compact ? "compact-screen" : ""}`}><div className={`screen-header ${compact ? "compact" : ""} ${titleOnly ? "title-only" : ""}`}>{!titleOnly && kicker ? <span className="kicker">{kicker}</span> : null}<h2>{title}</h2>{!titleOnly ? <p>{desc}</p> : null}</div><div className="screen-body">{children}</div></section>;
 
   let body: React.ReactNode = null;
-  if (route === "entry") body = <ScreenWrap kicker="Shifu" title="今天想解决什么问题？" desc="先告诉我目标、手边器材和今天的状态，我会给你一套可以马上开始的训练方案。"><div className="hero-card"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>3 分钟内完成设置</h3><p>适合扫码进入后的首次体验。当前优先推荐瑜伽球模板，但不限制你只能用单一器材。</p></div></div></ScreenWrap>;
+  if (route === "entry") body = <ScreenWrap kicker="Shifu" title="今天的问题？" desc="先告诉我目标、手边器材和今天的状态，我会给你一套可以马上开始的训练方案。"><div className="hero-card"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>3 分钟内完成设置</h3><p>适合扫码进入后的首次体验。当前优先推荐瑜伽球模板，但不限制你只能用单一器材。</p></div></div></ScreenWrap>;
   if (route === "goal") body = <ScreenWrap kicker="目标选择" title="先选今天目标" desc="先聚焦一个方向，我再给你方案。" compact titleOnly><div className="choice-grid">{goals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="选择可用器材" desc="可多选，先勾选你手边有的。" compact titleOnly><div className="choice-grid equipment-grid">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}>{item.priority ? <span className="tag card-tag">优先</span> : null}<span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "intake") body = <ScreenWrap kicker="快速确认" title="20 秒确认状态" desc="补全 4 项信息，我会给你更稳的方案。" compact titleOnly><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
@@ -196,7 +196,7 @@ function App() {
   if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮感觉如何？" desc="只要告诉我结果是否合适，我就能给出下一步建议。" titleOnly><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
   if (route === "next-step") body = <ScreenWrap kicker="下一步" title="下一步建议" desc="训练闭环不是结束，而是给你一个明确可继续的动作。" titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{nextStepCopy[nextStep.action].title}</h3><p>{nextStepCopy[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(nextStepCopy) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{nextStepCopy[action].badge}</span><div className="icon">{nextStepCopy[action].icon}</div><div className="copy"><strong>{nextStepCopy[action].title}</strong><p>{nextStepCopy[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
 
-  return <><style>{styles}</style><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row">{route !== "entry" ? <button className="back-button" type="button" onClick={goBack}><ArrowLeft size={16} /></button> : <div className="back-placeholder" />}<div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></footer> : null}</div></div></>;
+  return <><style>{styles}</style><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
 }
 
 const styles = `
@@ -277,26 +277,10 @@ button {
 
 .topbar-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
-}
-
-.back-button,
-.back-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.back-button {
-  cursor: pointer;
-  background: var(--soft);
-  color: var(--primary);
 }
 
 .topbar-copy {
@@ -1006,7 +990,22 @@ button {
   backdrop-filter: blur(18px);
 }
 
+.footer-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.footer-actions.with-back {
+  grid-template-columns: 120px 1fr;
+}
+
 .footer-btn {
+  min-height: 58px;
+  border-radius: 20px;
+}
+
+.footer-back {
   min-height: 58px;
   border-radius: 20px;
 }
