@@ -190,7 +190,7 @@ function App() {
   if (route === "goal") body = <ScreenWrap kicker="目标选择" title="你今天更想先解决哪一类问题？" desc="选择一个主目标。先聚焦一件事，训练方案会更准确。"><div className="stack">{goals.map((item) => <button key={item.id} type="button" className={`card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span><p>{item.desc}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="你身边现在能用哪些器材？" desc="可以多选。瑜伽球会优先命中训练模板，但不是唯一入口。"><div className="stack">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}><span className="icon">{item.icon}</span><div className="copy"><div className="inline"><strong>{item.title}</strong>{item.priority ? <span className="tag">优先模板</span> : null}</div><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "intake") body = <ScreenWrap kicker="快速确认" title="再用 20 秒确认今天状态" desc="只收集最低必要信息，保证方案足够轻、足够稳，也不会让你卡在长问卷里。"><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
-  if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"}>{plan ? <div className="sub-card"><div className="chip-row"><span className="chip"><Clock3 size={14} />{plan.estimatedMinutes} 分钟</span><span className="chip">器材：{equipmentLabel(plan.primaryEquipment)}</span></div><div className="summary">{plan.summary.map((x) => <span key={x} className="chip soft">{x}</span>)}</div><div className="note"><ShieldCheck size={16} /><span>{plan.safetyNote}</span></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
+  if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"}>{plan ? <div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">预计时长</span><strong><Clock3 size={14} />{plan.estimatedMinutes} 分钟</strong></div><div className="recommendation-metric"><span className="metric-label">建议器材</span><strong>{equipmentLabel(plan.primaryEquipment)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">训练结构</span><div className="summary-list">{plan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>开始前提醒</strong><span>{plan.safetyNote}</span></div></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
   if (route === "prep") body = <ScreenWrap kicker="开始前" title="准备一下再进入跟练" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。">{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>辅助查看动作，不影响主流程。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section>{mirrorEnabled ? <MirrorPreview enabled={mirrorEnabled} /> : null}</> : null}</ScreenWrap>;
   if (route === "session") body = <ScreenWrap kicker="跟练中" title={currentStep ? currentStep.title : "跟练中"} desc={currentStep ? currentStep.cue : ""}>{plan && currentStep ? <><section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />提前结束</button></div></section>{mirrorEnabled ? <MirrorPreview enabled={mirrorEnabled} /> : null}</> : null}</ScreenWrap>;
   if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮训练感觉怎么样？" desc="只要告诉我结果是否合适，我就能给出下一步建议。"><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
@@ -476,6 +476,68 @@ button {
   border-radius: 18px;
 }
 
+.recommendation-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.recommendation-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recommendation-metric,
+.recommendation-summary {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(244, 246, 245, 0.92);
+}
+
+.recommendation-metric strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "Lexend", sans-serif;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  font-weight: 700;
+}
+
+.recommendation-summary {
+  gap: 10px;
+}
+
+.summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summary-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
+}
+
 .mini-card strong,
 .copy strong,
 .hero-copy h3,
@@ -637,6 +699,25 @@ button {
   background: rgba(13, 138, 67, 0.08);
   color: var(--primary);
   line-height: 1.55;
+}
+
+.recommendation-note {
+  margin-top: 2px;
+}
+
+.note-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.note-copy strong {
+  font-family: "Lexend", sans-serif;
+  font-size: 0.92rem;
+  letter-spacing: -0.02em;
+}
+
+.note-copy span {
+  color: var(--muted);
 }
 
 .sub-head {
@@ -885,6 +966,12 @@ button {
     min-height: calc(100dvh - 48px);
     border-radius: 30px;
     overflow: hidden;
+  }
+}
+
+@media (max-width: 360px) {
+  .recommendation-metrics {
+    grid-template-columns: 1fr;
   }
 }
 `;
