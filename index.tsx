@@ -91,7 +91,7 @@ const nextAction = (outcome: FeedbackOutcomeId): RecoveryActionId => outcome ===
 const toneClass = (tone: string) => tone === "positive" ? "feedback-card positive" : tone === "warning" ? "feedback-card warning" : tone === "caution" ? "feedback-card caution" : "feedback-card";
 const equipmentLabel = (id: EquipmentId) => id === "yoga_ball" ? "瑜伽球" : id === "resistance_band" ? "弹力带" : id === "yoga_mat" ? "瑜伽垫" : id === "dumbbell" ? "哑铃" : "无器材";
 
-function MirrorPreview({ enabled }: { enabled: boolean }) {
+function MirrorPreview({ enabled, variant = "card", overlay }: { enabled: boolean; variant?: "card" | "session"; overlay?: React.ReactNode }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -104,7 +104,11 @@ function MirrorPreview({ enabled }: { enabled: boolean }) {
     return () => { active = false; if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; };
   }, [enabled]);
   const label = status === "ready" ? "已开启" : status === "loading" ? "启动中" : status === "error" ? "不可用" : "未开启";
-  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">辅助预览</span><h3>镜像预览</h3></div><span className={`status ${status}`}>{label}</span></div>{enabled ? status === "error" ? <div className="mirror-empty">摄像头权限不可用。你仍然可以继续标准跟练。</div> : <video ref={videoRef} className="mirror-video" autoPlay muted playsInline /> : <div className="mirror-empty">在准备页开启镜像预览后，这里会显示你的实时动作画面。</div>}</section>;
+  const media = enabled ? status === "error" ? <div className={`mirror-empty ${variant}`}>摄像头权限不可用。你仍然可以继续标准跟练。</div> : <video ref={videoRef} className={`mirror-video ${variant}`} autoPlay muted playsInline /> : <div className={`mirror-empty ${variant}`}>在准备页开启镜像预览后，这里会显示你的实时动作画面。</div>;
+  if (variant === "session") {
+    return <section className="mirror-stage"><div className="mirror-stage-media">{media}{overlay}</div><div className="mirror-stage-foot"><span className={`status ${status}`}>{label}</span></div></section>;
+  }
+  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">辅助预览</span><h3>镜像预览</h3></div><span className={`status ${status}`}>{label}</span></div>{media}</section>;
 }
 function App() {
   const context = contextFromQuery();
@@ -192,7 +196,7 @@ function App() {
   if (route === "intake") body = <ScreenWrap kicker="快速确认" title="20 秒确认状态" desc="补全 4 项信息，我会给你更稳的方案。" compact titleOnly><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
   if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"} titleOnly>{plan ? <div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">预计时长</span><strong><Clock3 size={14} />{plan.estimatedMinutes} 分钟</strong></div><div className="recommendation-metric"><span className="metric-label">建议器材</span><strong>{equipmentLabel(plan.primaryEquipment)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">训练结构</span><div className="summary-list">{plan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>开始前提醒</strong><span>{plan.safetyNote}</span></div></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
   if (route === "prep") body = <ScreenWrap kicker="开始前" title="开始前准备" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。" titleOnly>{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>辅助查看动作，不影响主流程。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section>{mirrorEnabled ? <MirrorPreview enabled={mirrorEnabled} /> : null}</> : null}</ScreenWrap>;
-  if (route === "session") body = <ScreenWrap kicker="跟练中" title={currentStep ? currentStep.title : "跟练中"} desc={currentStep ? currentStep.cue : ""}>{plan && currentStep ? <><section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />提前结束</button></div></section>{mirrorEnabled ? <MirrorPreview enabled={mirrorEnabled} /> : null}</> : null}</ScreenWrap>;
+  if (route === "session") body = <ScreenWrap kicker="跟练中" title={currentStep ? currentStep.title : "跟练中"} desc={currentStep ? currentStep.cue : ""} compact titleOnly>{plan && currentStep ? mirrorEnabled ? <div className="session-layout session-layout-mirror"><MirrorPreview enabled={mirrorEnabled} variant="session" overlay={<div className="session-overlay"><div className="session-overlay-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="session-overlay-timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="session-overlay-bottom"><p>{currentStep.cue}</p><div className="progress large overlay-progress"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div></div></div>} /><section className="sub-card runtime runtime-compact"><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions compact-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />结束</button></div></section></div> : <section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />提前结束</button></div></section> : null}</ScreenWrap>;
   if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮感觉如何？" desc="只要告诉我结果是否合适，我就能给出下一步建议。" titleOnly><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
   if (route === "next-step") body = <ScreenWrap kicker="下一步" title="下一步建议" desc="训练闭环不是结束，而是给你一个明确可继续的动作。" titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{nextStepCopy[nextStep.action].title}</h3><p>{nextStepCopy[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(nextStepCopy) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{nextStepCopy[action].badge}</span><div className="icon">{nextStepCopy[action].icon}</div><div className="copy"><strong>{nextStepCopy[action].title}</strong><p>{nextStepCopy[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
 
@@ -485,6 +489,15 @@ button {
 .session-actions {
   display: grid;
   gap: 12px;
+}
+
+.session-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.session-layout-mirror {
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .mini-grid {
@@ -892,6 +905,107 @@ button {
   font-size: 0.92rem;
 }
 
+.runtime-compact {
+  padding: 14px 16px 16px;
+  gap: 12px;
+}
+
+.compact-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compact-actions .primary,
+.compact-actions .secondary,
+.compact-actions .ghost {
+  min-height: 50px;
+  padding: 12px 10px;
+  font-size: 0.92rem;
+}
+
+.mirror-stage {
+  display: grid;
+  gap: 10px;
+}
+
+.mirror-stage-media {
+  position: relative;
+  min-height: min(54dvh, 460px);
+  border-radius: 24px;
+  overflow: hidden;
+  background: #101314;
+  box-shadow: var(--shadow2);
+}
+
+.mirror-stage-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mirror-video.session,
+.mirror-empty.session {
+  min-height: min(54dvh, 460px);
+  height: 100%;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #1b1f20 0%, #303536 100%);
+}
+
+.session-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.04) 36%, rgba(0, 0, 0, 0.52) 100%);
+  pointer-events: none;
+}
+
+.session-overlay-top,
+.session-overlay-bottom {
+  display: grid;
+  gap: 10px;
+}
+
+.session-overlay-top {
+  justify-items: start;
+  align-content: start;
+}
+
+.session-overlay-timer {
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  min-width: min(72vw, 260px);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  color: #fff;
+}
+
+.session-overlay-timer .time {
+  color: #fff;
+}
+
+.session-overlay-timer span,
+.session-overlay-bottom p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.session-overlay-bottom {
+  align-content: end;
+}
+
+.overlay-progress {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .primary,
 .secondary,
 .ghost {
@@ -1065,6 +1179,16 @@ button {
 
   .equipment-grid {
     grid-template-columns: 1fr;
+  }
+
+  .compact-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mirror-stage-media,
+  .mirror-video.session,
+  .mirror-empty.session {
+    min-height: min(48dvh, 380px);
   }
 }
 `;
