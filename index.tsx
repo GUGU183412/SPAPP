@@ -95,14 +95,31 @@ function MirrorPreview({ enabled, stream, status, variant = "card", overlay }: {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = enabled ? stream : null;
-    }
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
+    const video = videoRef.current;
+    if (!video) return;
+    const tryPlay = () => {
+      video.play().catch(() => {
+        // iOS Safari may defer autoplay until metadata is ready; ignore transient play failures.
+      });
     };
+    video.muted = true;
+    video.playsInline = true;
+    if (enabled && stream) {
+      if (video.srcObject !== stream) {
+        video.srcObject = stream;
+      }
+      if (video.readyState >= 1) {
+        tryPlay();
+      }
+      video.addEventListener("loadedmetadata", tryPlay);
+      video.addEventListener("canplay", tryPlay);
+      return () => {
+        video.removeEventListener("loadedmetadata", tryPlay);
+        video.removeEventListener("canplay", tryPlay);
+      };
+    }
+    video.pause();
+    video.srcObject = null;
   }, [enabled, stream]);
 
   const label = status === "ready" ? "已开启" : status === "loading" ? "启动中" : status === "error" ? "不可用" : "未开启";
@@ -121,6 +138,8 @@ function App() {
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [mirrorEnabled, setMirrorEnabled] = useState(false);
   const [mirrorStatus, setMirrorStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [mirrorRefreshKey, setMirrorRefreshKey] = useState(0);
+  const [mirrorStreamVersion, setMirrorStreamVersion] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState>({ outcome: null, note: "" });
   const [nextStep, setNextStep] = useState<NextStepState>({ action: null });
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -149,12 +168,19 @@ function App() {
       if (mirrorStreamRef.current) {
         mirrorStreamRef.current.getTracks().forEach((t) => t.stop());
         mirrorStreamRef.current = null;
+        setMirrorStreamVersion((n) => n + 1);
       }
       return;
     }
-    if (mirrorStreamRef.current) {
+    const existingTrack = mirrorStreamRef.current?.getVideoTracks()[0];
+    if (mirrorStreamRef.current && mirrorStreamRef.current.active && existingTrack?.readyState === "live") {
       setMirrorStatus("ready");
       return;
+    }
+    if (mirrorStreamRef.current) {
+      mirrorStreamRef.current.getTracks().forEach((t) => t.stop());
+      mirrorStreamRef.current = null;
+      setMirrorStreamVersion((n) => n + 1);
     }
     if (!navigator.mediaDevices?.getUserMedia) {
       setMirrorStatus("error");
@@ -168,11 +194,34 @@ function App() {
       }
       mirrorStreamRef.current = stream;
       setMirrorStatus("ready");
+      setMirrorStreamVersion((n) => n + 1);
     }).catch(() => setMirrorStatus("error"));
     return () => {
       active = false;
     };
-  }, [mirrorEnabled]);
+  }, [mirrorEnabled, mirrorRefreshKey]);
+  useEffect(() => {
+    if (!mirrorEnabled || !mirrorStreamRef.current) return;
+    const stream = mirrorStreamRef.current;
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    const recover = () => {
+      if (!mirrorEnabled) return;
+      if (mirrorStreamRef.current) {
+        mirrorStreamRef.current.getTracks().forEach((t) => t.stop());
+        mirrorStreamRef.current = null;
+        setMirrorStreamVersion((n) => n + 1);
+      }
+      setMirrorStatus("loading");
+      setMirrorRefreshKey((n) => n + 1);
+    };
+    track.addEventListener("ended", recover);
+    stream.addEventListener("inactive", recover);
+    return () => {
+      track.removeEventListener("ended", recover);
+      stream.removeEventListener("inactive", recover);
+    };
+  }, [mirrorEnabled, mirrorStreamVersion]);
   useEffect(() => () => {
     if (mirrorStreamRef.current) {
       mirrorStreamRef.current.getTracks().forEach((t) => t.stop());
