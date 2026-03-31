@@ -149,6 +149,7 @@ function App() {
   const dropoutRef = useRef(false);
   const lastSpokenRef = useRef<string | null>(null);
   const mirrorStreamRef = useRef<MediaStream | null>(null);
+  const mirrorAnchorRef = useRef<HTMLVideoElement | null>(null);
   const plan = pickPlan(goal, equipment, intake);
   const currentStep = plan?.steps[stepIndex] || null;
   const completedWorkSteps = plan ? plan.steps.slice(0, stepIndex).filter((s) => s.type === "work").length : 0;
@@ -159,6 +160,36 @@ function App() {
   useEffect(() => { const onHash = () => setRoute(routeFromHash()); window.addEventListener("hashchange", onHash); return () => window.removeEventListener("hashchange", onHash); }, []);
   useEffect(() => { if (!sessionStarted || sessionPaused || !currentStep) return; const timer = window.setInterval(() => setRemainingSeconds((n) => { if (n <= 1) { window.clearInterval(timer); completeStep(); return 0; } return n - 1; }), 1000); return () => window.clearInterval(timer); }, [currentStep, sessionPaused, sessionStarted]);
   useEffect(() => { if (!voiceEnabled || !sessionStarted || !currentStep) return; if (lastSpokenRef.current === currentStep.id) return; lastSpokenRef.current = currentStep.id; tracker.track("voice_prompt_use", { route, enabled: true, step_id: currentStep.id }); if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(`${currentStep.type === "rest" ? "休息" : "开始"}，${currentStep.title}`); u.lang = "zh-CN"; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } }, [currentStep, route, sessionStarted, voiceEnabled]);
+  useEffect(() => {
+    const video = mirrorAnchorRef.current;
+    if (!video) return;
+    const stream = mirrorStreamRef.current;
+    const tryPlay = () => {
+      video.play().catch(() => {
+        // Keep silent; visible mirror preview will also attempt playback.
+      });
+    };
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    if (mirrorEnabled && stream && mirrorStatus === "ready") {
+      if (video.srcObject !== stream) {
+        video.srcObject = stream;
+      }
+      if (video.readyState >= 1) {
+        tryPlay();
+      }
+      video.addEventListener("loadedmetadata", tryPlay);
+      video.addEventListener("canplay", tryPlay);
+      return () => {
+        video.removeEventListener("loadedmetadata", tryPlay);
+        video.removeEventListener("canplay", tryPlay);
+      };
+    }
+    video.pause();
+    video.srcObject = null;
+  }, [mirrorEnabled, mirrorStatus, route]);
   useEffect(() => {
     if (mirrorEnabled) return;
     setMirrorStatus("idle");
@@ -286,7 +317,7 @@ function App() {
   if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮感觉如何？" desc="只要告诉我结果是否合适，我就能给出下一步建议。" titleOnly><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
   if (route === "next-step") body = <ScreenWrap kicker="下一步" title="下一步建议" desc="训练闭环不是结束，而是给你一个明确可继续的动作。" titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{nextStepCopy[nextStep.action].title}</h3><p>{nextStepCopy[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(nextStepCopy) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{nextStepCopy[action].badge}</span><div className="icon">{nextStepCopy[action].icon}</div><div className="copy"><strong>{nextStepCopy[action].title}</strong><p>{nextStepCopy[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
 
-  return <><style>{styles}</style><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
+  return <><style>{styles}</style><video ref={mirrorAnchorRef} className="camera-anchor" autoPlay muted playsInline /><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
 }
 
 const styles = `
@@ -344,6 +375,17 @@ button {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
+}
+
+.camera-anchor {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  top: -100px;
+  left: -100px;
+  opacity: 0.001;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .phone-shell {
