@@ -32,11 +32,11 @@ const goals = [
 ];
 
 const equipmentOptions = [
-  { id: "yoga_ball" as EquipmentId, title: "瑜伽球", detail: "阶段三优先模板", icon: <Volleyball size={20} />, priority: true },
-  { id: "resistance_band" as EquipmentId, title: "弹力带", detail: "适合轻量激活和拉伸", icon: <Sparkles size={20} /> },
-  { id: "yoga_mat" as EquipmentId, title: "瑜伽垫", detail: "适合地面训练", icon: <ShieldCheck size={20} /> },
-  { id: "dumbbell" as EquipmentId, title: "哑铃", detail: "适合基础力量补充", icon: <Dumbbell size={20} /> },
-  { id: "none" as EquipmentId, title: "无器材", detail: "也能开始训练", icon: <MonitorSmartphone size={20} /> }
+  { id: "yoga_ball" as EquipmentId, title: "瑜伽球", detail: "优先模板", icon: <Volleyball size={20} />, priority: true },
+  { id: "resistance_band" as EquipmentId, title: "弹力带", detail: "拉伸激活", icon: <Sparkles size={20} /> },
+  { id: "yoga_mat" as EquipmentId, title: "瑜伽垫", detail: "地面训练", icon: <ShieldCheck size={20} /> },
+  { id: "dumbbell" as EquipmentId, title: "哑铃", detail: "力量补充", icon: <Dumbbell size={20} /> },
+  { id: "none" as EquipmentId, title: "无器材", detail: "直接开始", icon: <MonitorSmartphone size={20} /> }
 ];
 
 const experienceOptions = [{ id: "beginner" as ExperienceId, title: "第一次尝试" }, { id: "returning" as ExperienceId, title: "重新开始" }, { id: "active" as ExperienceId, title: "平时有训练" }];
@@ -187,8 +187,8 @@ function App() {
 
   let body: React.ReactNode = null;
   if (route === "entry") body = <ScreenWrap kicker="Shifu" title="今天想解决什么问题？" desc="先告诉我目标、手边器材和今天的状态，我会给你一套可以马上开始的训练方案。"><div className="hero-card"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>3 分钟内完成设置</h3><p>适合扫码进入后的首次体验。当前优先推荐瑜伽球模板，但不限制你只能用单一器材。</p></div></div></ScreenWrap>;
-  if (route === "goal") body = <ScreenWrap kicker="目标选择" title="你今天更想先解决哪一类问题？" desc="选择一个主目标。先聚焦一件事，训练方案会更准确。"><div className="stack">{goals.map((item) => <button key={item.id} type="button" className={`card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span><p>{item.desc}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
-  if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="你身边现在能用哪些器材？" desc="可以多选。瑜伽球会优先命中训练模板，但不是唯一入口。"><div className="stack">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}><span className="icon">{item.icon}</span><div className="copy"><div className="inline"><strong>{item.title}</strong>{item.priority ? <span className="tag">优先模板</span> : null}</div><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
+  if (route === "goal") body = <ScreenWrap kicker="目标选择" title="先选今天目标" desc="先聚焦一个方向，我再给你方案。" compact><div className="choice-grid">{goals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
+  if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="选择可用器材" desc="可多选，先勾选你手边有的。" compact><div className="choice-grid equipment-grid">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}>{item.priority ? <span className="tag card-tag">优先</span> : null}<span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "intake") body = <ScreenWrap kicker="快速确认" title="20 秒确认状态" desc="补全 4 项信息，我会给你更稳的方案。" compact><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
   if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"}>{plan ? <div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">预计时长</span><strong><Clock3 size={14} />{plan.estimatedMinutes} 分钟</strong></div><div className="recommendation-metric"><span className="metric-label">建议器材</span><strong>{equipmentLabel(plan.primaryEquipment)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">训练结构</span><div className="summary-list">{plan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>开始前提醒</strong><span>{plan.safetyNote}</span></div></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
   if (route === "prep") body = <ScreenWrap kicker="开始前" title="准备一下再进入跟练" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。">{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>辅助查看动作，不影响主流程。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section>{mirrorEnabled ? <MirrorPreview enabled={mirrorEnabled} /> : null}</> : null}</ScreenWrap>;
@@ -478,6 +478,15 @@ button {
   gap: 10px;
 }
 
+.choice-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.equipment-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .mini-grid,
 .stack,
 .pill-list,
@@ -584,6 +593,49 @@ button {
   isolation: isolate;
 }
 
+.goal-card {
+  min-height: 92px;
+}
+
+.goal-card .copy {
+  gap: 4px;
+}
+
+.equipment-card {
+  grid-template-columns: 1fr;
+  align-content: space-between;
+  justify-items: start;
+  min-height: 148px;
+  aspect-ratio: 1 / 1;
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.equipment-card .icon {
+  width: 52px;
+  height: 52px;
+}
+
+.equipment-card .copy {
+  gap: 6px;
+  width: 100%;
+}
+
+.equipment-card .copy strong {
+  font-size: 1rem;
+}
+
+.equipment-card .copy span {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.equipment-card .check {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
 .card:hover,
 .feedback-card:hover,
 .pill:hover,
@@ -663,6 +715,16 @@ button {
   justify-self: start;
   grid-column: 1 / -1;
   margin-bottom: -4px;
+}
+
+.card-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
 }
 
 .card.selected .tag {
@@ -991,6 +1053,10 @@ button {
 
 @media (max-width: 360px) {
   .recommendation-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-grid {
     grid-template-columns: 1fr;
   }
 }

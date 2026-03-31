@@ -111,6 +111,13 @@ Every component must be "oversized" to accommodate varying degrees of motor cont
 - Recommendation tags such as "Recommended" or "Review" should be supportive metadata only. They must never overpower the main selection state.
 - These screens should feel like decision screens inside one app, not like a separate survey module or support microsite.
 
+### Selection Cards: Prefer Decision Over Explanation
+
+- Goal selection, equipment selection, and similar choice screens should behave like **fast decision surfaces**, not mini information sheets.
+- For first-order choices, prefer **title + short secondary cue** over title + paragraph + supporting paragraph.
+- Equipment selection may use **two-column rounded-square cards** on mobile when that improves scan speed and tap confidence.
+- Explanatory copy belongs in recommendation, prep, or support screens. It should not overload the selection moment itself.
+
 ### Input Fields: The Precision Tool
 
 - **State**: Active inputs should use a `primary` "Ghost Border" (2px at 20% opacity) and a subtle `surface-tint` to draw the eye without cluttering the screen.
