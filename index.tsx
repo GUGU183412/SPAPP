@@ -531,6 +531,7 @@ const totalWorkSteps = (plan: SessionPlan | null) => plan ? plan.steps.filter((s
 const fmt = (s: number) => `${String(Math.floor(Math.max(0, s) / 60)).padStart(2, "0")}:${String(Math.max(0, s) % 60).padStart(2, "0")}`;
 const nextAction = (outcome: FeedbackOutcomeId): RecoveryActionId => outcome === "great" ? "continue_track" : outcome === "too_hard" ? "repeat_easier" : outcome === "need_review" ? "review_prep" : "contact_support";
 const toneClass = (tone: string) => tone === "positive" ? "feedback-card positive" : tone === "warning" ? "feedback-card warning" : tone === "caution" ? "feedback-card caution" : "feedback-card";
+const intakeReady = (state: IntakeState) => Boolean(state.experience && state.duration && state.discomfort && state.intensity);
 const equipmentLabel = (id: EquipmentId, locale: LocaleId) => locale === "en" ? equipmentLabelEn[id] : id === "yoga_ball" ? "瑜伽球" : id === "resistance_band" ? "弹力带" : id === "yoga_mat" ? "瑜伽垫" : id === "dumbbell" ? "哑铃" : "无器材";
 const localizeGoals = (locale: LocaleId) => goals.map((item) => locale === "en" ? { ...item, ...goalCopyEn[item.id] } : item);
 const localizeEquipment = (locale: LocaleId) => equipmentOptions.map((item) => locale === "en" ? { ...item, ...equipmentCopyEn[item.id] } : item);
@@ -799,7 +800,7 @@ function App() {
   useEffect(() => { if (mirrorEnabled) tracker.track("mirror_mode_use", { route, enabled: true }); }, [mirrorEnabled, route]);
   useEffect(() => { const onHide = () => { if (dropoutRef.current || route === "entry" || route === "next-step") return; tracker.track("flow_exit", { route, duration_ms: Date.now() - (enteredAt[route] || Date.now()), goal, equipment: equipment.join(",") || null, session_started: sessionStarted, session_interrupted: sessionInterrupted }); dropoutRef.current = true; }; window.addEventListener("pagehide", onHide); return () => window.removeEventListener("pagehide", onHide); }, [enteredAt, equipment, goal, route, sessionInterrupted, sessionStarted]);
 
-  const canContinue = route === "entry" ? true : route === "goal" ? Boolean(goal) : route === "equipment" ? equipment.length > 0 : route === "intake" ? Boolean(intake.experience && intake.duration && intake.discomfort && intake.intensity) : route === "recommendation" ? Boolean(plan) : route === "prep" ? true : route === "feedback" ? Boolean(feedback.outcome) : route === "next-step" ? Boolean(nextStep.action) : false;
+  const canContinue = route === "entry" ? true : route === "goal" ? Boolean(goal) : route === "equipment" ? equipment.length > 0 : route === "intake" ? intakeReady(intake) : route === "recommendation" ? Boolean(plan) : route === "prep" ? true : route === "feedback" ? Boolean(feedback.outcome) : route === "next-step" ? Boolean(nextStep.action) : false;
   const routeIndex = ROUTES.indexOf(route);
   const progress = route === "session" ? 0.72 : (routeIndex + 1) / ROUTES.length;
   const sessionProgress = plan ? (stepIndex + 1) / plan.steps.length : 0;
@@ -807,6 +808,26 @@ function App() {
   const goTo = (r: RouteId) => setRoute(r);
   const goBack = () => { if (route === "goal") return goTo("entry"); if (route === "equipment") return goTo("goal"); if (route === "intake") return goTo("equipment"); if (route === "recommendation") return goTo("intake"); if (route === "prep") return goTo("recommendation"); if (route === "session") return goTo("prep"); if (route === "feedback") return goTo("session"); if (route === "next-step") return goTo("feedback"); };
   const toggleEquipment = (id: EquipmentId) => setEquipment((curr) => { if (id === "none") return curr.includes("none") ? [] : ["none"]; const list = curr.filter((x) => x !== "none"); return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]; });
+  const chooseGoal = (nextGoal: GoalId) => {
+    setGoal(nextGoal);
+    if (route !== "goal") return;
+    tracker.track("goal_select", { goal: nextGoal, source: context.source, asin: context.asin });
+    goTo("equipment");
+  };
+  const updateIntake = <K extends keyof IntakeState>(field: K, value: IntakeState[K]) => {
+    const nextIntake = { ...intake, [field]: value };
+    setIntake(nextIntake);
+    if (route !== "intake") return;
+    if (!intakeReady(intake) && intakeReady(nextIntake)) {
+      tracker.track("intake_complete", {
+        experience: nextIntake.experience,
+        duration: nextIntake.duration,
+        discomfort: nextIntake.discomfort,
+        intensity: nextIntake.intensity
+      });
+      goTo("recommendation");
+    }
+  };
   const returnHome = () => {
     const needsConfirm = route === "session" || route === "feedback" || route === "next-step";
     if (needsConfirm && !window.confirm(copy.confirmLeaveActive)) return;
@@ -881,9 +902,9 @@ function App() {
 
   const nextFlow = async () => {
     if (route === "entry") return goTo("goal");
-    if (route === "goal" && goal) { tracker.track("goal_select", { goal, source: context.source, asin: context.asin }); return goTo("equipment"); }
+    if (route === "goal" && goal) return goTo("equipment");
     if (route === "equipment" && equipment.length) { tracker.track("equipment_select", { equipment: equipment.join(","), yoga_ball_selected: equipment.includes("yoga_ball") }); return goTo("intake"); }
-    if (route === "intake" && intake.experience && intake.duration && intake.discomfort && intake.intensity) { tracker.track("intake_complete", { experience: intake.experience, duration: intake.duration, discomfort: intake.discomfort, intensity: intake.intensity }); return goTo("recommendation"); }
+    if (route === "intake" && intakeReady(intake)) { tracker.track("intake_complete", { experience: intake.experience, duration: intake.duration, discomfort: intake.discomfort, intensity: intake.intensity }); return goTo("recommendation"); }
     if (route === "recommendation" && plan) { tracker.track("plan_accept", { plan_id: plan.id, primary_equipment: plan.primaryEquipment, estimated_minutes: plan.estimatedMinutes }); return goTo("prep"); }
     if (route === "prep" && plan) {
       tracker.track("prep_ready", { plan_id: plan.id, voice_enabled: voiceEnabled, mirror_enabled: mirrorEnabled });
@@ -939,9 +960,9 @@ function App() {
 
   let body: React.ReactNode = null;
   if (route === "entry") body = <ScreenWrap title={copy.entry.title} desc="" titleOnly><div className="hero-card compact-hero"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>{copy.entry.heroTitle}</h3><p>{copy.entry.heroDesc}</p></div></div></ScreenWrap>;
-  if (route === "goal") body = <ScreenWrap kicker={copy.goal.kicker} title={copy.goal.title} desc={copy.goal.desc} compact titleOnly><div className="choice-grid">{localizedGoals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
+  if (route === "goal") body = <ScreenWrap kicker={copy.goal.kicker} title={copy.goal.title} desc={copy.goal.desc} compact titleOnly><div className="choice-grid">{localizedGoals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => chooseGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
   if (route === "equipment") body = <ScreenWrap kicker={copy.equipment.kicker} title={copy.equipment.title} desc={copy.equipment.desc} compact><div className="choice-grid equipment-grid">{localizedEquipment.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><div className="equipment-card-side">{item.priority ? <span className="tag card-tag">{copy.equipment.priority}</span> : null}<CheckCircle2 size={18} className="check" /></div></button>)}</div></ScreenWrap>;
-  if (route === "intake") body = <ScreenWrap kicker={copy.intake.kicker} title={copy.intake.title} desc={copy.intake.desc} compact titleOnly><div className="q"><h3>{copy.intake.labels.experience}</h3><div className="pill-list">{localizedExperience.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.duration}</h3><div className="pill-list">{localizedDuration.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>{copy.intake.labels.discomfort}</h3><div className="pill-list">{localizedDiscomfort.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.intensity}</h3><div className="pill-list">{localizedIntensity.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
+  if (route === "intake") body = <ScreenWrap kicker={copy.intake.kicker} title={copy.intake.title} desc={copy.intake.desc} compact titleOnly><div className="q"><h3>{copy.intake.labels.experience}</h3><div className="pill-list">{localizedExperience.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => updateIntake("experience", o.id)}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.duration}</h3><div className="pill-list">{localizedDuration.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => updateIntake("duration", o.id)}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>{copy.intake.labels.discomfort}</h3><div className="pill-list">{localizedDiscomfort.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => updateIntake("discomfort", o.id)}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.intensity}</h3><div className="pill-list">{localizedIntensity.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => updateIntake("intensity", o.id)}>{o.title}</button>)}</div></div></ScreenWrap>;
   if (route === "recommendation") body = <ScreenWrap kicker={copy.recommendation.kicker} title={displayPlan ? displayPlan.title : copy.recommendation.emptyTitle} desc={displayPlan ? displayPlan.why : copy.recommendation.emptyDesc} titleOnly>{displayPlan ? <><div className="recommendation-inline">{editActionRow}<p>{copy.recommendation.editHint}</p></div><div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">{copy.recommendation.estimated}</span><strong><Clock3 size={14} />{displayPlan.estimatedMinutes} {locale === "en" ? "min" : "分钟"}</strong></div><div className="recommendation-metric"><span className="metric-label">{copy.recommendation.equipment}</span><strong>{equipmentLabel(displayPlan.primaryEquipment, locale)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">{copy.recommendation.summary}</span><div className="summary-list">{displayPlan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>{copy.recommendation.safetyTitle}</strong><span>{displayPlan.safetyNote}</span></div></div></div></> : <div className="sub-card"><p>{copy.recommendation.emptyBody}</p></div>}</ScreenWrap>;
   if (route === "prep") body = <ScreenWrap kicker={copy.prep.kicker} title={copy.prep.title} desc={copy.prep.desc} titleOnly>{displayPlan ? <><div className="recommendation-inline">{editActionRow}<p>{copy.prep.editHint}</p></div><section className="sub-card prep-hero"><div className="prep-hero-copy"><span className="kicker">{copy.prep.heroKicker}</span><h3>{copy.prep.heroTitle}</h3><p>{copy.prep.heroDesc}</p></div><ul className="list prep-list">{displayPlan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul><div className="prep-support-head"><span className="kicker">{copy.prep.supportKicker}</span><p>{copy.prep.supportDesc}</p></div><div className="prep-support-grid"><button type="button" className={`support-toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="support-toggle-main"><div className="support-toggle-title"><strong>{copy.prep.voiceTitle}</strong><span>{voiceEnabled ? copy.prep.voiceOn : copy.prep.voiceOff}</span></div><span className={`state ${voiceEnabled ? "ready" : ""}`}>{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? copy.prep.enabled : copy.prep.disabled}</span></div></button><button type="button" className={`support-toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="support-toggle-main"><div className="support-toggle-title"><strong>{copy.prep.mirrorTitle}</strong><span>{mirrorEnabled ? copy.prep.mirrorOn : copy.prep.mirrorOff}</span></div><span className={`state ${mirrorEnabled ? "ready" : ""}`}><MonitorSmartphone size={16} />{mirrorEnabled ? copy.prep.enabled : copy.prep.disabled}</span></div></button></div></section></> : null}</ScreenWrap>;
   if (route === "session") body = <ScreenWrap kicker={copy.session.kicker} title={currentStep ? currentStep.title : copy.session.kicker} desc={currentStep ? currentStep.cue : ""} compact titleOnly>{plan && currentStep ? mirrorEnabled ? <div className="session-layout session-layout-mirror"><MirrorPreview enabled={mirrorEnabled} stream={mirrorStreamRef.current} status={mirrorStatus} copy={copy.mirror} variant="session" overlay={<div className="session-overlay"><div className="session-overlay-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? copy.session.rest : copy.session.work}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} {copy.session.completeCount}</span></div><div className="session-overlay-timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? copy.session.recoverTime : copy.session.currentCountdown}</span></div><div className="session-overlay-bottom"><p>{currentStep.cue}</p><div className="progress large overlay-progress"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div></div></div>} /><section className="sub-card runtime runtime-compact"><div className="meta"><span>{copy.session.progress}</span><span>{plan.estimatedMinutes} {copy.session.planMinutes}</span></div><div className="session-actions compact-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? copy.session.resume : copy.session.pause}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />{copy.session.next}</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />{copy.session.finish}</button></div></section></div> : <section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? copy.session.rest : copy.session.work}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} {copy.session.completeCount}</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? copy.session.recoverTime : copy.session.currentCountdown}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>{copy.session.progress}</span><span>{plan.estimatedMinutes} {copy.session.planMinutes}</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? copy.session.resume : copy.session.pause}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />{copy.session.next}</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />{copy.session.endEarly}</button></div></section> : null}</ScreenWrap>;
@@ -1043,6 +1064,7 @@ button {
 
 .phone-shell {
   width: min(100%, 430px);
+  height: 100dvh;
   min-height: 100dvh;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 249, 0.95) 100%);
   box-shadow: var(--shadow);
@@ -1066,6 +1088,7 @@ button {
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
   padding: calc(18px + env(safe-area-inset-top)) 20px 12px;
   background: rgba(255, 255, 255, 0.74);
   backdrop-filter: blur(24px);
@@ -1187,7 +1210,10 @@ button {
 
 .main {
   flex: 1;
-  padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 20px calc(28px + env(safe-area-inset-bottom));
 }
 
 .screen,
@@ -1204,11 +1230,11 @@ button {
 }
 
 .screen.compact-screen {
-  gap: 16px;
+  gap: 14px;
 }
 
 .screen-header.compact {
-  gap: 10px;
+  gap: 8px;
 }
 
 .screen-header.title-only {
@@ -1233,8 +1259,8 @@ button {
 }
 
 .screen-header.compact h2 {
-  font-size: clamp(1.95rem, 6.5vw, 2.4rem);
-  line-height: 0.94;
+  font-size: clamp(1.76rem, 5.9vw, 2.18rem);
+  line-height: 0.96;
   letter-spacing: -0.05em;
 }
 
@@ -1255,9 +1281,9 @@ button {
 }
 
 .screen-header.compact p {
-  font-size: 0.92rem;
-  line-height: 1.52;
-  max-width: 22rem;
+  font-size: 0.88rem;
+  line-height: 1.48;
+  max-width: 18.5rem;
 }
 
 .hero-card,
@@ -1316,7 +1342,7 @@ button {
 
 .choice-grid {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .equipment-grid {
@@ -1353,21 +1379,21 @@ button {
 
 .recommendation-card {
   display: grid;
-  gap: 18px;
-  padding: 20px;
+  gap: 14px;
+  padding: 18px;
 }
 
 .recommendation-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .recommendation-metric,
 .recommendation-summary {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 13px 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: inset 0 0 0 1px var(--hairline);
@@ -1382,6 +1408,12 @@ button {
   letter-spacing: -0.02em;
 }
 
+.recommendation-summary {
+  order: -1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(80, 255, 113, 0.08) 100%);
+  box-shadow: 0 10px 24px rgba(13, 138, 67, 0.05), inset 0 0 0 1px rgba(13, 138, 67, 0.12);
+}
+
 .metric-label {
   font-size: 0.72rem;
   line-height: 1.2;
@@ -1391,25 +1423,21 @@ button {
   font-weight: 700;
 }
 
-.recommendation-summary {
-  gap: 10px;
-}
-
 .summary-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .summary-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 10px;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--primary);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   box-shadow: inset 0 0 0 1px var(--hairline);
 }
@@ -1428,11 +1456,11 @@ button {
 .feedback-card {
   width: 100%;
   text-align: left;
-  padding: 18px;
-  border-radius: 24px;
+  padding: 16px;
+  border-radius: 22px;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -1441,28 +1469,32 @@ button {
 }
 
 .goal-card {
-  min-height: 104px;
+  min-height: 94px;
 }
 
 .goal-card .copy {
-  gap: 6px;
+  gap: 4px;
+}
+
+.goal-card .copy strong {
+  font-size: 1rem;
 }
 
 .equipment-card {
   grid-template-columns: 44px 1fr auto;
   align-content: center;
   justify-items: stretch;
-  min-height: 96px;
+  min-height: 84px;
   aspect-ratio: auto;
-  padding: 16px 18px;
-  border-radius: 22px;
-  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  gap: 12px;
 }
 
 .equipment-card .icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
 }
 
 .equipment-card .copy {
@@ -1471,12 +1503,12 @@ button {
 }
 
 .equipment-card .copy strong {
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .equipment-card .copy span {
-  font-size: 0.88rem;
-  line-height: 1.42;
+  font-size: 0.84rem;
+  line-height: 1.38;
 }
 
 .equipment-card-side {
@@ -1591,9 +1623,9 @@ button {
 
 .q {
   display: grid;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 22px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: inset 0 0 0 1px var(--hairline);
 }
@@ -1601,15 +1633,15 @@ button {
 .q h3 {
   margin: 0;
   font-family: "Lexend", sans-serif;
-  font-size: 1.02rem;
+  font-size: 0.96rem;
   letter-spacing: -0.03em;
 }
 
 .pill {
   width: 100%;
-  min-height: 52px;
-  border-radius: 18px;
-  padding: 15px 16px;
+  min-height: 48px;
+  border-radius: 16px;
+  padding: 13px 14px;
   background: rgba(244, 246, 245, 0.9);
   color: var(--text);
   text-align: left;
@@ -1622,7 +1654,7 @@ button {
 .pill.detail {
   display: grid;
   gap: 4px;
-  padding: 15px 16px;
+  padding: 13px 14px;
 }
 
 .pill.detail span {
@@ -1643,6 +1675,8 @@ button {
 
 .recommendation-note {
   margin-top: 2px;
+  padding: 13px 14px;
+  border-radius: 18px;
 }
 
 .recommendation-inline {
@@ -1738,8 +1772,8 @@ button {
 
 .prep-hero {
   display: grid;
-  gap: 18px;
-  padding: 22px;
+  gap: 16px;
+  padding: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 248, 246, 0.92) 100%);
 }
 
@@ -1763,34 +1797,42 @@ button {
 }
 
 .prep-list {
-  gap: 14px;
-}
-
-.prep-list li {
   gap: 12px;
 }
 
+.prep-list li {
+  gap: 10px;
+}
+
 .prep-list span {
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 0.96rem;
+  line-height: 1.5;
 }
 
 .prep-support-head {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .prep-support-grid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.03);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.prep-support-head p {
+  font-size: 0.88rem;
 }
 
 .support-toggle {
   width: 100%;
   text-align: left;
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.82);
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: inset 0 0 0 1px var(--hairline);
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
@@ -1808,7 +1850,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
 }
 
 .support-toggle-title {
@@ -1819,7 +1861,7 @@ button {
 .support-toggle-title strong {
   margin: 0;
   font-family: "Lexend", sans-serif;
-  font-size: 1.02rem;
+  font-size: 0.98rem;
   letter-spacing: -0.03em;
 }
 
@@ -2074,6 +2116,7 @@ button {
   position: sticky;
   bottom: 0;
   z-index: 9;
+  flex-shrink: 0;
   padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 28%, rgba(255, 255, 255, 0.98) 100%);
   backdrop-filter: blur(18px);
@@ -2235,9 +2278,16 @@ button {
 
 .route-goal .screen-header,
 .route-equipment .screen-header,
+.route-intake .screen-header,
 .route-feedback .screen-header,
 .route-next-step .screen-header {
-  max-width: 20rem;
+  max-width: 18rem;
+}
+
+.route-goal .screen,
+.route-equipment .screen,
+.route-intake .screen {
+  gap: 12px;
 }
 
 .route-equipment .screen {
@@ -2262,7 +2312,7 @@ button {
 .route-goal .card,
 .route-feedback .feedback-card,
 .route-next-step .action-card {
-  min-height: 108px;
+  min-height: 98px;
 }
 
 .route-equipment .card-tag {
@@ -2270,12 +2320,20 @@ button {
   justify-self: end;
   align-self: start;
   margin-left: auto;
-  min-height: 24px;
-  padding: 0 9px;
+  min-height: 22px;
+  padding: 0 8px;
 }
 
 .route-intake .screen {
-  gap: 14px;
+  gap: 12px;
+}
+
+.route-intake .pill-list {
+  gap: 10px;
+}
+
+.route-intake .q {
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .route-prep .sub-card,

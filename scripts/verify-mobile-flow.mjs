@@ -59,19 +59,15 @@ async function verifyStandardFlow() {
     await clickPrimaryFooter(page);
     await waitForHash(page, "#goal");
     await page.getByRole("button", { name: /久坐舒缓/i }).click();
-
-    await clickPrimaryFooter(page);
     await waitForHash(page, "#equipment");
     await page.locator(".equipment-card.selected").waitFor();
 
     await clickPrimaryFooter(page);
     await waitForHash(page, "#intake");
-    await page.getByRole("button", { name: /第一次尝试/i }).click();
     await page.getByRole("button", { name: /12 分钟/i }).click();
-    await page.getByRole("button", { name: /上背 \/ 胸椎发紧/i }).click();
     await page.getByRole("button", { name: /标准强度/i }).click();
-
-    await clickPrimaryFooter(page);
+    await page.getByRole("button", { name: /第一次尝试/i }).click();
+    await page.getByRole("button", { name: /上背 \/ 胸椎发紧/i }).click();
     await waitForHash(page, "#recommendation");
     await page.getByTestId("edit-equipment").click();
     await waitForHash(page, "#equipment");
