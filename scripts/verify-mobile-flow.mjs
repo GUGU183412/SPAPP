@@ -3,10 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { chromium, devices } from "playwright";
 
-const baseUrl = process.env.STAGE2_BASE_URL || "http://127.0.0.1:4173/?asin=B0BXJLTRSH&src=qr";
-const screenshotDir = process.env.STAGE2_SCREENSHOT_DIR
-  ? path.resolve(process.cwd(), process.env.STAGE2_SCREENSHOT_DIR)
-  : null;
+const baseUrl = process.env.STAGE3_BASE_URL || "http://127.0.0.1:4173/?asin=B0BXJLTRSH&src=qr";
 const outputArgIndex = process.argv.indexOf("--output");
 const outputPath =
   outputArgIndex >= 0 && process.argv[outputArgIndex + 1]
@@ -33,190 +30,119 @@ async function createPage(deviceName) {
   return { browser, context, page };
 }
 
-async function resetSession(page) {
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.evaluate(() => window.localStorage.clear());
-  await page.reload({ waitUntil: "networkidle" });
-  await waitForHash(page, "#landing");
-}
-
 async function waitForHash(page, hash) {
   await page.waitForFunction((expected) => window.location.hash === expected, hash);
 }
 
-async function getCurrentFrame(page) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const frame = page.frames().find((candidate) => candidate !== page.mainFrame());
-    if (frame) {
-      try {
-        await frame.waitForLoadState("domcontentloaded", { timeout: 250 });
-        const hasBody = await frame.evaluate(() => Boolean(document.body));
-        if (hasBody) {
-          return frame;
-        }
-      } catch {
-        // Keep polling until the iframe swaps and stabilizes.
-      }
-    }
-
-    await page.waitForTimeout(100);
-  }
-
-  throw new Error("Unable to resolve the active UI iframe");
+async function resetApp(page, url = baseUrl) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto(url, { waitUntil: "networkidle" });
 }
 
-async function clickByText(page, targetText) {
-  const frame = await getCurrentFrame(page);
-  const clicked = await frame.evaluate((query) => {
-    const normalizedQuery = query.toLowerCase();
-    const candidates = [
-      ...document.querySelectorAll('button, div[class*="cursor-pointer"], label')
-    ];
-    const target = candidates.find((element) =>
-      (element.textContent || "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase()
-        .includes(normalizedQuery)
-    );
-
-    if (!target) {
-      return null;
-    }
-
-    target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    return (target.textContent || "").replace(/\s+/g, " ").trim();
-  }, targetText);
-
-  ensure(Boolean(clicked), `Unable to find clickable text: ${targetText}`);
-  return clicked;
+async function clickPrimaryFooter(page) {
+  await page.locator(".footer-btn").click();
 }
 
-async function capture(page, name) {
-  if (!screenshotDir) return null;
-  const frame = await getCurrentFrame(page);
-  await frame.waitForFunction(() => (document.body?.innerText || "").trim().length > 20);
-  await page.waitForTimeout(250);
-  fs.mkdirSync(screenshotDir, { recursive: true });
-  const filePath = path.join(screenshotDir, `${name}.png`);
-  await page.screenshot({ path: filePath, fullPage: true });
-  return filePath;
+async function openControlCenter(page) {
+  await page.getByTestId("control-center-toggle").click();
+  await page.getByTestId("control-center").waitFor();
 }
 
-async function readEvents(page) {
-  return page.evaluate(() => JSON.parse(window.localStorage.getItem("spapp_poc_events") || "[]"));
-}
-
-function summarize(events) {
-  return events.map((event) => event.name);
-}
-
-async function verifyClosedLoop() {
+async function verifyStandardFlow() {
   const { browser, page } = await createPage("iPhone 13");
-  const screenshots = {};
 
   try {
-    await resetSession(page);
-    screenshots.landing = await capture(page, "landing-restored-check");
+    await resetApp(page);
+    await waitForHash(page, "#entry");
 
-    await clickByText(page, "3-step safety installation guide");
-    await waitForHash(page, "#step1");
-    screenshots.step1 = await capture(page, "step1-restored-check");
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#goal");
+    await page.getByRole("button", { name: /久坐舒缓/i }).click();
 
-    await clickByText(page, "next step");
-    await waitForHash(page, "#step2");
-    screenshots.step2 = await capture(page, "step2-restored-check");
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#equipment");
+    await page.locator(".equipment-card.selected").waitFor();
 
-    const step2Frame = await getCurrentFrame(page);
-    await step2Frame.evaluate(() => {
-      document
-        .querySelector("main section .relative.overflow-hidden")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#intake");
+    await page.getByRole("button", { name: /第一次尝试/i }).click();
+    await page.getByRole("button", { name: /12 分钟/i }).click();
+    await page.getByRole("button", { name: /上背 \/ 胸椎发紧/i }).click();
+    await page.getByRole("button", { name: /标准强度/i }).click();
+
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#recommendation");
+    await page.getByTestId("edit-equipment").click();
+    await waitForHash(page, "#equipment");
+    await page.locator(".equipment-card.selected").waitFor();
+    await page.evaluate(() => {
+      window.location.hash = "#recommendation";
     });
+    await waitForHash(page, "#recommendation");
 
-    await clickByText(page, "next");
-    await waitForHash(page, "#step3");
-    screenshots.step3 = await capture(page, "step3-restored-check");
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#prep");
+    await openControlCenter(page);
+    await page.getByTestId("control-home").click();
+    await waitForHash(page, "#entry");
 
-    await clickByText(page, "done");
-    await waitForHash(page, "#feedback");
-    screenshots.feedback = await capture(page, "feedback-restored-check");
+    await clickPrimaryFooter(page);
+    await waitForHash(page, "#goal");
+    const selectedGoal = page.locator(".goal-card.selected strong");
+    await selectedGoal.waitFor();
+    ensure((await selectedGoal.textContent())?.includes("久坐舒缓"), "Home return did not preserve selected goal draft");
 
-    await clickByText(page, "no, still slip");
-    await waitForHash(page, "#unresolved");
-    screenshots.unresolved = await capture(page, "unresolved-restored-check");
-
-    await clickByText(page, "it still slips");
-    const unresolvedFrame = await getCurrentFrame(page);
-    await unresolvedFrame.locator("textarea").fill("Need another lock check");
-    await clickByText(page, "submit and review");
-    await waitForHash(page, "#step1");
-
-    const events = await readEvents(page);
-    const names = summarize(events);
-
-    ensure(names.includes("pwa_entry"), "Closed loop missing pwa_entry");
-    ensure(names.includes("tutorial_start"), "Closed loop missing tutorial_start");
-    ensure(
-      names.filter((name) => name === "step_complete").length === 3,
-      "Closed loop missing step_complete events"
-    );
-    ensure(names.includes("safety_trust_click"), "Closed loop missing safety_trust_click");
-    ensure(names.includes("resolved_status"), "Closed loop missing resolved_status");
-    ensure(names.includes("unresolved_reason_submit"), "Closed loop missing unresolved_reason_submit");
-
-    const unresolvedEvent = events.find((event) => event.name === "unresolved_reason_submit");
-    ensure(
-      unresolvedEvent?.payload?.recommended_review === "step1",
-      "Closed loop unresolved reason did not recommend step1"
-    );
+    const events = await page.evaluate(() => JSON.parse(window.localStorage.getItem("spapp_stage3_events") || "[]"));
+    const eventNames = events.map((event) => event.name);
+    ensure(eventNames.includes("goal_select"), "Expected goal_select event");
+    ensure(eventNames.includes("equipment_select"), "Expected equipment_select event");
+    ensure(eventNames.includes("intake_complete"), "Expected intake_complete event");
+    ensure(eventNames.includes("plan_accept"), "Expected plan_accept event");
 
     return {
-      scenario: "closed_loop_unresolved_recovery",
-      browser: "chromium",
-      device: "iPhone 13",
+      scenario: "standard_flow_with_edit_and_home_return",
       status: "passed",
-      eventCount: events.length,
-      eventNames: names,
-      screenshots
+      route: await page.evaluate(() => window.location.hash),
+      selectedGoal: await selectedGoal.textContent(),
+      eventNames
     };
   } finally {
     await browser.close();
   }
 }
 
-async function verifyDropout() {
-  const { browser, context, page } = await createPage("Pixel 7");
+async function verifyPreviewAndLocale() {
+  const { browser, page } = await createPage("Pixel 7");
 
   try {
-    await resetSession(page);
-    await clickByText(page, "3-step safety installation guide");
-    await waitForHash(page, "#step1");
-    await clickByText(page, "next step");
-    await waitForHash(page, "#step2");
-    await page.waitForTimeout(200);
-    await page.goto("about:blank", { waitUntil: "load" });
+    const previewUrl = `${baseUrl}&preview=1&lang=en#recommendation`;
+    await resetApp(page, previewUrl);
+    await waitForHash(page, "#recommendation");
 
-    const inspectPage = await context.newPage();
-    await inspectPage.goto(baseUrl, { waitUntil: "networkidle" });
-    const events = await readEvents(inspectPage);
-    const names = summarize(events);
+    await page.getByText(/Yoga Ball Posture Relief Starter/i).waitFor();
+    await openControlCenter(page);
+    await page.getByTestId("preview-route-session").click();
+    await waitForHash(page, "#session");
+    await page.getByText(/Session progress/i).waitFor();
 
-    ensure(names.includes("dropout_step"), "Dropout flow missing dropout_step");
+    await openControlCenter(page);
+    await page.getByTestId("locale-zh").click();
+    await waitForHash(page, "#session");
+    await page.getByText(/本次训练进度/).waitFor();
 
-    const dropoutEvent = events.find((event) => event.name === "dropout_step");
-    ensure(dropoutEvent?.payload?.page === "step2", "Dropout flow did not capture step2 context");
+    const locale = await page.evaluate(() => window.localStorage.getItem("spapp_stage3_locale"));
+    ensure(locale === "zh-CN", "Locale switch did not persist zh-CN");
 
-    await inspectPage.close();
+    await openControlCenter(page);
+    await page.getByTestId("control-home").click();
+    await waitForHash(page, "#entry");
 
     return {
-      scenario: "mid_tutorial_dropout",
-      browser: "chromium",
-      device: "Pixel 7",
+      scenario: "preview_mode_and_locale_switch",
       status: "passed",
-      eventCount: events.length,
-      eventNames: names,
-      dropoutPayload: dropoutEvent?.payload || null
+      finalHash: await page.evaluate(() => window.location.hash),
+      persistedLocale: locale
     };
   } finally {
     await browser.close();
@@ -230,8 +156,8 @@ const result = {
 };
 
 try {
-  result.checks.push(await verifyClosedLoop());
-  result.checks.push(await verifyDropout());
+  result.checks.push(await verifyStandardFlow());
+  result.checks.push(await verifyPreviewAndLocale());
 
   const output = JSON.stringify(result, null, 2);
   if (outputPath) {

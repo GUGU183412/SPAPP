@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowRight, CheckCircle2, Clock3, Dumbbell, HeartPulse, Mic, MicOff, MonitorSmartphone, Pause, Play, ShieldCheck, Sparkles, Volleyball, Waves, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Dumbbell, HeartPulse, Mic, MicOff, MonitorSmartphone, Pause, Play, ShieldCheck, SlidersHorizontal, Sparkles, Volleyball, Waves, XCircle } from "lucide-react";
 
 type RouteId = "entry" | "goal" | "equipment" | "intake" | "recommendation" | "prep" | "session" | "feedback" | "next-step";
 type GoalId = "posture_relief" | "shoulder_relief" | "starter_tone";
@@ -19,11 +19,16 @@ type SessionPlan = { id: string; title: string; goalId: GoalId; primaryEquipment
 
 type FeedbackState = { outcome: FeedbackOutcomeId | null; note: string };
 type NextStepState = { action: RecoveryActionId | null };
+type LocaleId = "zh-CN" | "en";
 
 const DEFAULT_ASIN = "B0BXJLTRSH";
 const TRACKER_KEY = "spapp_stage3_events";
+const LOCALE_STORAGE_KEY = "spapp_stage3_locale";
+const DEFAULT_LOCALE: LocaleId = "zh-CN";
 const ROUTES: RouteId[] = ["entry", "goal", "equipment", "intake", "recommendation", "prep", "session", "feedback", "next-step"];
 const ROUTE_LABEL: Record<RouteId, string> = { entry: "开始", goal: "目标", equipment: "器材", intake: "状态", recommendation: "方案", prep: "准备", session: "跟练", feedback: "反馈", "next-step": "下一步" };
+const ROUTE_LABEL_EN: Record<RouteId, string> = { entry: "Home", goal: "Goal", equipment: "Gear", intake: "Status", recommendation: "Plan", prep: "Prep", session: "Session", feedback: "Feedback", "next-step": "Next" };
+const PREVIEW_ROUTES: RouteId[] = ["entry", "goal", "equipment", "intake", "recommendation", "prep", "session", "feedback", "next-step"];
 
 const goals = [
   { id: "posture_relief" as GoalId, title: "久坐舒缓", subtitle: "打开上背和胸廓", desc: "适合久坐后发紧、想快速活动身体的人。", icon: <Waves size={20} /> },
@@ -56,6 +61,429 @@ const nextStepCopy: Record<RecoveryActionId, { title: string; detail: string; ba
   contact_support: { title: "联系支持", detail: "如果仍不适合，转入人工支持或运营跟进。", badge: "支持", icon: <HeartPulse size={18} /> }
 };
 
+const uiCopy: Record<LocaleId, {
+  routeLabel: Record<RouteId, string>;
+  topbarActive: string;
+  footerDefault: string;
+  footerBack: string;
+  footerByRoute: Partial<Record<RouteId, string>>;
+  control: {
+    toggle: string;
+    title: string;
+    home: string;
+    homeHint: string;
+    language: string;
+    zh: string;
+    en: string;
+    edit: string;
+    preview: string;
+    previewHint: string;
+    close: string;
+  };
+  editRoute: Record<"goal" | "equipment" | "intake", string>;
+  confirmLeaveActive: string;
+  voicePrompt: { start: string; rest: string };
+  mirror: {
+    unavailable: string;
+    intro: string;
+    statusReady: string;
+    statusLoading: string;
+    statusError: string;
+    statusIdle: string;
+    kicker: string;
+    title: string;
+  };
+  entry: { title: string; heroTitle: string; heroDesc: string };
+  goal: { kicker: string; title: string; desc: string };
+  equipment: { kicker: string; title: string; desc: string; priority: string };
+  intake: {
+    kicker: string;
+    title: string;
+    desc: string;
+    labels: {
+      experience: string;
+      duration: string;
+      discomfort: string;
+      intensity: string;
+    };
+  };
+  recommendation: {
+    kicker: string;
+    emptyTitle: string;
+    emptyDesc: string;
+    estimated: string;
+    equipment: string;
+    summary: string;
+    safetyTitle: string;
+    emptyBody: string;
+    editHint: string;
+  };
+  prep: {
+    kicker: string;
+    title: string;
+    desc: string;
+    heroKicker: string;
+    heroTitle: string;
+    heroDesc: string;
+    supportKicker: string;
+    supportDesc: string;
+    voiceTitle: string;
+    voiceOn: string;
+    voiceOff: string;
+    mirrorTitle: string;
+    mirrorOn: string;
+    mirrorOff: string;
+    enabled: string;
+    disabled: string;
+    editHint: string;
+  };
+  session: {
+    kicker: string;
+    rest: string;
+    work: string;
+    completeCount: string;
+    recoverTime: string;
+    currentCountdown: string;
+    progress: string;
+    planMinutes: string;
+    resume: string;
+    pause: string;
+    next: string;
+    finish: string;
+    endEarly: string;
+  };
+  feedback: {
+    kicker: string;
+    title: string;
+    desc: string;
+    notePlaceholder: string;
+  };
+  nextStep: {
+    kicker: string;
+    title: string;
+    desc: string;
+  };
+}> = {
+  "zh-CN": {
+    routeLabel: ROUTE_LABEL,
+    topbarActive: "跟练中",
+    footerDefault: "继续",
+    footerBack: "返回",
+    footerByRoute: { entry: "开始训练设置", recommendation: "使用这套方案", prep: "开始跟练", feedback: "生成下一步", "next-step": "保留当前建议" },
+    control: {
+      toggle: "控制",
+      title: "快速控制",
+      home: "回到主界面",
+      homeHint: "目标、器材和状态会继续保留。",
+      language: "语言查看",
+      zh: "中文",
+      en: "English",
+      edit: "修改已选信息",
+      preview: "预览模式",
+      previewHint: "仅用于演示和检查",
+      close: "关闭"
+    },
+    editRoute: { goal: "改目标", equipment: "改器材", intake: "改状态" },
+    confirmLeaveActive: "返回主界面后会结束当前训练流程，但会保留目标、器材和状态。确认继续吗？",
+    voicePrompt: { start: "开始", rest: "休息" },
+    mirror: {
+      unavailable: "摄像头权限不可用。你仍然可以继续标准跟练。",
+      intro: "在准备页开启镜像预览后，这里会显示你的实时动作画面。",
+      statusReady: "已开启",
+      statusLoading: "启动中",
+      statusError: "不可用",
+      statusIdle: "未开启",
+      kicker: "辅助预览",
+      title: "镜像预览"
+    },
+    entry: { title: "今天的问题？", heroTitle: "20 秒完成设置", heroDesc: "选目标、器材和状态，马上开始跟练。" },
+    goal: { kicker: "目标选择", title: "先选今天目标", desc: "先聚焦一个方向，我再给你方案。" },
+    equipment: { kicker: "器材", title: "选择器材", desc: "勾选你现在手边有的，可多选。", priority: "优先" },
+    intake: {
+      kicker: "快速确认",
+      title: "20 秒确认状态",
+      desc: "补全 4 项信息，我会给你更稳的方案。",
+      labels: { experience: "训练经验", duration: "今天能练多久", discomfort: "今天最想注意哪里", intensity: "希望从什么强度开始" }
+    },
+    recommendation: {
+      kicker: "推荐结果",
+      emptyTitle: "暂时还没匹配到方案",
+      emptyDesc: "请回到上一步补充目标、器材或状态信息。",
+      estimated: "预计时长",
+      equipment: "建议器材",
+      summary: "训练结构",
+      safetyTitle: "开始前提醒",
+      emptyBody: "当前没有符合条件的训练计划。",
+      editHint: "如果想微调方案，直接改目标、器材或状态即可。"
+    },
+    prep: {
+      kicker: "开始前",
+      title: "开始前准备",
+      desc: "确认站位和辅助方式，然后直接开始。",
+      heroKicker: "准备确认",
+      heroTitle: "先确认这 3 件事",
+      heroDesc: "这一页只保留真正影响开始训练的内容。",
+      supportKicker: "辅助方式",
+      supportDesc: "按你的习惯选择，默认都可以随时再改。",
+      voiceTitle: "语音播报",
+      voiceOn: "减少盯屏负担",
+      voiceOff: "保持纯视觉跟练",
+      mirrorTitle: "镜像预览",
+      mirrorOn: "开始后自动打开",
+      mirrorOff: "不开也能正常训练",
+      enabled: "已开启",
+      disabled: "未开启",
+      editHint: "发现方案不对时，直接回改前面的条件，不用整条流程重走。"
+    },
+    session: {
+      kicker: "跟练中",
+      rest: "休息",
+      work: "动作进行中",
+      completeCount: "个动作完成",
+      recoverTime: "恢复时间",
+      currentCountdown: "当前动作倒计时",
+      progress: "本次训练进度",
+      planMinutes: "分钟计划",
+      resume: "继续",
+      pause: "暂停",
+      next: "下一步",
+      finish: "结束",
+      endEarly: "提前结束"
+    },
+    feedback: {
+      kicker: "训练反馈",
+      title: "这轮感觉如何？",
+      desc: "只要告诉我结果是否合适，我就能给出下一步建议。",
+      notePlaceholder: "如果想补充哪里不确定、哪里不舒服，可以简单写一句。"
+    },
+    nextStep: {
+      kicker: "下一步",
+      title: "下一步建议",
+      desc: "训练闭环不是结束，而是给你一个明确可继续的动作。"
+    }
+  },
+  en: {
+    routeLabel: ROUTE_LABEL_EN,
+    topbarActive: "Active",
+    footerDefault: "Continue",
+    footerBack: "Back",
+    footerByRoute: { entry: "Start setup", recommendation: "Use this plan", prep: "Start session", feedback: "Generate next step", "next-step": "Keep this recommendation" },
+    control: {
+      toggle: "Controls",
+      title: "Quick controls",
+      home: "Return home",
+      homeHint: "Goal, equipment, and intake stay saved as a draft.",
+      language: "Language",
+      zh: "中文",
+      en: "English",
+      edit: "Edit setup",
+      preview: "Preview mode",
+      previewHint: "Internal demo and QA only",
+      close: "Close"
+    },
+    editRoute: { goal: "Edit goal", equipment: "Edit gear", intake: "Edit status" },
+    confirmLeaveActive: "Return home and leave the current session flow? Your goal, gear, and intake will stay saved.",
+    voicePrompt: { start: "Start", rest: "Rest" },
+    mirror: {
+      unavailable: "Camera permission is unavailable. You can still continue with the standard guided session.",
+      intro: "Turn on mirror preview on the prep screen to see your live movement here.",
+      statusReady: "On",
+      statusLoading: "Starting",
+      statusError: "Unavailable",
+      statusIdle: "Off",
+      kicker: "Support view",
+      title: "Mirror preview"
+    },
+    entry: { title: "What do you need today?", heroTitle: "Set up in 20 seconds", heroDesc: "Pick a goal, your gear, and today's status, then start training." },
+    goal: { kicker: "Goal", title: "Choose today's focus", desc: "Pick one direction first. I'll shape the session around it." },
+    equipment: { kicker: "Equipment", title: "Equipment", desc: "Select what you have available today. You can choose multiple.", priority: "Priority" },
+    intake: {
+      kicker: "Quick intake",
+      title: "Confirm today's status",
+      desc: "Fill in four inputs and I'll recommend a safer first session.",
+      labels: { experience: "Training experience", duration: "Available time", discomfort: "What needs attention today", intensity: "Starting intensity" }
+    },
+    recommendation: {
+      kicker: "Recommended plan",
+      emptyTitle: "No plan matched yet",
+      emptyDesc: "Go back and add goal, equipment, or intake details.",
+      estimated: "Estimated time",
+      equipment: "Suggested gear",
+      summary: "Session structure",
+      safetyTitle: "Before you start",
+      emptyBody: "No matching session plan is available yet.",
+      editHint: "If the plan feels off, update the goal, gear, or intake directly."
+    },
+    prep: {
+      kicker: "Before you start",
+      title: "Get ready to begin",
+      desc: "Confirm setup and support options, then start.",
+      heroKicker: "Ready check",
+      heroTitle: "Confirm these 3 things",
+      heroDesc: "This page keeps only what truly affects the start of training.",
+      supportKicker: "Support options",
+      supportDesc: "Choose what fits your habit. You can still change these later.",
+      voiceTitle: "Voice guidance",
+      voiceOn: "Less screen-watching pressure",
+      voiceOff: "Stay fully visual",
+      mirrorTitle: "Mirror preview",
+      mirrorOn: "Open automatically after start",
+      mirrorOff: "Training still works without it",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      editHint: "If the setup feels wrong, revise the earlier choices instead of restarting everything."
+    },
+    session: {
+      kicker: "In session",
+      rest: "Rest",
+      work: "Working",
+      completeCount: "moves complete",
+      recoverTime: "Recovery time",
+      currentCountdown: "Current move countdown",
+      progress: "Session progress",
+      planMinutes: "min plan",
+      resume: "Resume",
+      pause: "Pause",
+      next: "Next",
+      finish: "Finish",
+      endEarly: "End early"
+    },
+    feedback: {
+      kicker: "Session feedback",
+      title: "How did that round feel?",
+      desc: "Tell me whether the session felt right, and I'll suggest the next move.",
+      notePlaceholder: "If you want to note uncertainty or discomfort, add one short sentence."
+    },
+    nextStep: {
+      kicker: "Next step",
+      title: "Recommended next move",
+      desc: "The loop does not end here. It should point you to one clear next action."
+    }
+  }
+};
+
+const goalCopyEn: Record<GoalId, { title: string; subtitle: string; desc: string }> = {
+  posture_relief: { title: "Desk relief", subtitle: "Open the upper back", desc: "Best for post-sitting stiffness when you want a fast reset." },
+  shoulder_relief: { title: "Neck and shoulder ease", subtitle: "Start with safety", desc: "Best for tight shoulders or light discomfort when you want a gentler session." },
+  starter_tone: { title: "Starter tone", subtitle: "Build stability first", desc: "Best for building core stability and full-body participation from scratch." }
+};
+const equipmentCopyEn: Record<EquipmentId, { title: string; detail: string }> = {
+  yoga_ball: { title: "Yoga ball", detail: "Priority template" },
+  resistance_band: { title: "Resistance band", detail: "Stretch and activation" },
+  yoga_mat: { title: "Yoga mat", detail: "Floor work" },
+  dumbbell: { title: "Dumbbell", detail: "Strength support" },
+  none: { title: "No equipment", detail: "Start right away" }
+};
+const experienceCopyEn: Record<ExperienceId, string> = {
+  beginner: "First time trying",
+  returning: "Starting again",
+  active: "Already training"
+};
+const durationCopyEn: Record<DurationId, { title: string; detail: string }> = {
+  "8": { title: "8 min", detail: "Light" },
+  "12": { title: "12 min", detail: "Standard" },
+  "18": { title: "18 min", detail: "Full round" }
+};
+const discomfortCopyEn: Record<DiscomfortId, string> = {
+  none: "No obvious discomfort today",
+  upper_back: "Upper back / thoracic tightness",
+  shoulder: "Neck / shoulder discomfort",
+  core_confidence: "Low core stability confidence"
+};
+const intensityCopyEn: Record<IntensityId, string> = {
+  gentle: "Start lighter",
+  steady: "Standard intensity",
+  energized: "More activation"
+};
+const feedbackCopyEn: Record<FeedbackOutcomeId, { title: string; detail: string }> = {
+  great: { title: "That felt good", detail: "The pace felt right. I'm ready to continue." },
+  too_hard: { title: "A bit too hard", detail: "I want to repeat this with less intensity first." },
+  need_review: { title: "I want to review prep", detail: "I still feel unsure about the setup, form, or gear." },
+  stopped_early: { title: "I stopped early", detail: "I need a clearer or safer next step." }
+};
+const nextStepCopyEn: Record<RecoveryActionId, { title: string; detail: string; badge: string }> = {
+  repeat_easier: { title: "Repeat an easier version", detail: "Keep the same goal and lower time or intensity automatically.", badge: "Recommended" },
+  continue_track: { title: "Move to the next session", detail: "Stay on the same goal and continue into the next foundational round.", badge: "Continue" },
+  review_prep: { title: "Review the prep page", detail: "Reconfirm setup, pacing, and safety cues before trying again.", badge: "Review" },
+  contact_support: { title: "Contact support", detail: "If it still does not feel right, route into human support or follow-up.", badge: "Support" }
+};
+const equipmentLabelEn: Record<EquipmentId, string> = {
+  yoga_ball: "Yoga ball",
+  resistance_band: "Resistance band",
+  yoga_mat: "Yoga mat",
+  dumbbell: "Dumbbell",
+  none: "No equipment"
+};
+const planCopyEn: Record<string, {
+  title: string;
+  why: string;
+  safetyNote: string;
+  prepChecklist: string[];
+  summary: string[];
+  steps: Record<string, { title: string; cue: string }>;
+}> = {
+  "yoga-ball-posture": {
+    title: "Yoga Ball Posture Relief Starter",
+    why: "You chose desk relief and you have a yoga ball nearby. This first session is intentionally light so you can build comfort and confidence fast.",
+    safetyNote: "Keep breathing steady. If your shoulder feels sharp pain, stop immediately and switch to a lighter version.",
+    prepChecklist: ["Stabilize the yoga ball on a non-slip surface, ideally near a wall.", "Leave about one arm's length of space so the ball does not hit furniture.", "In the first round, aim for smoothness, not range."],
+    summary: ["4 moves", "About 12 min", "Ball activation + floor release"],
+    steps: {
+      breath: { title: "Ball-supported chest opening breath", cue: "Support the back of your head and gently open the chest." },
+      "rest-1": { title: "Reset your breath", cue: "Inhale through the nose, exhale through the mouth, and let the shoulders relax." },
+      pelvis: { title: "Pelvic roll", cue: "Keep the movement small and focus on regaining pelvic control." },
+      "rest-2": { title: "Short rest", cue: "Notice whether the low back and upper back feel lighter." },
+      wall: { title: "Wall-supported scapular activation", cue: "Draw the shoulder blades down softly and avoid shrugging." },
+      "rest-3": { title: "Return to standing", cue: "Prepare for the last movement." },
+      finish: { title: "Floor cooldown release", cue: "Let the back lengthen naturally to finish the first round." }
+    }
+  },
+  "yoga-ball-shoulder": {
+    title: "Yoga Ball Neck and Shoulder Relief Starter",
+    why: "You chose neck and shoulder relief. The yoga ball lowers load and makes the shoulder pattern feel smoother for a first session.",
+    safetyNote: "Sharp pain or numbness is not normal training feedback. Stop immediately if it appears.",
+    prepChecklist: ["Keep the ball in front of your body so it does not drift off center.", "Stay in a comfortable range instead of chasing height.", "Relax the neck and prioritize rhythm first."],
+    summary: ["3 moves", "About 10 min", "Shoulder activation + easy breath"],
+    steps: {
+      slide: { title: "Forward shoulder activation on the ball", cue: "Press the ball forward lightly and feel the shoulder blade glide." },
+      "rest-1": { title: "Return to neutral", cue: "Relax the neck and lightly tuck the chin." },
+      circle: { title: "Small circles on the ball", cue: "Keep the circles small first, then expand only if you feel steady." },
+      "rest-2": { title: "Recover your breath", cue: "If it feels good, move into the last set." },
+      reach: { title: "Wall-assisted overhead reach", cue: "Lift only as high as feels comfortable. No need to go overhead." }
+    }
+  },
+  "starter-mat": {
+    title: "Yoga Ball and Floor Starter Tone",
+    why: "You chose starter tone. This plan favors stability and easy pacing so the first session feels controlled and approachable.",
+    safetyNote: "Find stability first and do not chase speed. If you lose balance, place both feet down immediately.",
+    prepChecklist: ["Keep both feet grounded and align the ball with the hips.", "Start with a smaller activation range to confirm the setup will not slip.", "Lightly brace the core and avoid holding your breath."],
+    summary: ["4 moves", "About 14 min", "Stability + core activation"],
+    steps: {
+      march: { title: "Alternating foot lift on the ball", cue: "Keep the pelvis steady and lift only slightly from the floor." },
+      "rest-1": { title: "Reset your position", cue: "Notice whether the core is beginning to engage." },
+      reach: { title: "Alternating forward reach on the ball", cue: "As the arms reach forward, keep the trunk stable." },
+      "rest-2": { title: "Relax the shoulders", cue: "Prepare for the third move." },
+      squat: { title: "Wall-assisted squat", cue: "Slow the movement down and keep the weight centered between both feet." },
+      "rest-3": { title: "Short rest", cue: "Keep the last round smooth and steady." },
+      finish: { title: "Supine finish", cue: "Lengthen through the limbs slowly and keep the back relaxed against the floor." }
+    }
+  },
+  "bodyweight-shoulder": {
+    title: "No-Equipment Neck and Shoulder Relief",
+    why: "Even without equipment, you can still start with a low-load relief session for the neck and shoulders.",
+    safetyNote: "Move only inside a comfortable range and do not push into pain.",
+    prepChecklist: ["Standing or sitting upright both work.", "Relax the shoulders and lightly tuck the chin.", "Aim for smooth motion first, not bigger range."],
+    summary: ["3 moves", "About 8 min", "No equipment needed"],
+    steps: {
+      neck: { title: "Nodding warm-up", cue: "A small range is enough." },
+      "rest-1": { title: "Reset your breath", cue: "Let the shoulders soften." },
+      scap: { title: "Scapular glide", cue: "Shrug gently first, then let the shoulders settle down." },
+      "rest-2": { title: "Return to neutral", cue: "Prepare for the last move." },
+      wall: { title: "Wall-assisted reach", cue: "Stop at a comfortable height." }
+    }
+  }
+};
+
 const plans: SessionPlan[] = [
   { id: "yoga-ball-posture", title: "瑜伽球姿态舒缓首练", goalId: "posture_relief", primaryEquipment: "yoga_ball", why: "你选择了久坐舒缓，且身边有瑜伽球。系统优先给你一套更容易建立安全感的轻量首练。", estimatedMinutes: 12, safetyNote: "保持呼吸稳定；如果肩部出现刺痛，立刻暂停并改为更轻版本。", prepChecklist: ["把瑜伽球固定在不打滑的位置，最好靠墙。", "预留一臂距离，避免球滚动时碰到家具。", "第一轮只追求顺畅，不追求幅度。"], summary: ["4 个动作", "约 12 分钟", "球上激活 + 地面放松"], steps: [{ id: "breath", title: "球上胸廓呼吸打开", type: "work", durationSec: 45, cue: "双手扶头后方，慢慢打开胸口。" }, { id: "rest-1", title: "调整呼吸", type: "rest", durationSec: 20, cue: "鼻吸口呼，让肩膀自然放松。" }, { id: "pelvis", title: "骨盆前后滚动", type: "work", durationSec: 40, cue: "动作小一点，重点找回骨盆控制。" }, { id: "rest-2", title: "短暂休息", type: "rest", durationSec: 20, cue: "感受腰背是否更轻松。" }, { id: "wall", title: "靠墙球上肩胛激活", type: "work", durationSec: 45, cue: "肩胛轻轻向下，不要耸肩。" }, { id: "rest-3", title: "恢复站姿", type: "rest", durationSec: 20, cue: "准备最后一个动作。" }, { id: "finish", title: "地面收尾放松", type: "work", durationSec: 50, cue: "让背部自然延展，完成第一轮。" }] },
   { id: "yoga-ball-shoulder", title: "瑜伽球肩颈放松首练", goalId: "shoulder_relief", primaryEquipment: "yoga_ball", why: "你选择了肩颈放松。瑜伽球能帮助你降低负担，让肩带动作更平滑，适合作为第一次训练。", estimatedMinutes: 10, safetyNote: "任何刺痛或麻感都不属于正常训练反馈，出现时请立即停止。", prepChecklist: ["将球固定在身体前方，避免滚离中线。", "动作范围保持在舒适区间，不追求高度。", "颈部保持放松，优先保证节奏。"], summary: ["3 个动作", "约 10 分钟", "肩带激活 + 轻呼吸"], steps: [{ id: "slide", title: "球前滑肩带激活", type: "work", durationSec: 40, cue: "轻推球向前，感受肩胛滑动。" }, { id: "rest-1", title: "回到中立位", type: "rest", durationSec: 20, cue: "放松颈部，下巴微收。" }, { id: "circle", title: "球上小幅画圈", type: "work", durationSec: 45, cue: "画小圈，先稳再扩大。" }, { id: "rest-2", title: "恢复呼吸", type: "rest", durationSec: 20, cue: "感觉良好再进入最后一组。" }, { id: "reach", title: "靠墙上举引导", type: "work", durationSec: 50, cue: "举到舒服位置即可，不必过头。" }] },
@@ -71,6 +499,20 @@ const tracker = {
 const contextFromQuery = () => {
   const p = new URLSearchParams(window.location.search);
   return { asin: p.get("asin") || DEFAULT_ASIN, source: p.get("src") || "direct", campaign: p.get("campaign") || "stage3", productHint: p.get("product") || "yoga-ball" };
+};
+const readLocaleOverride = (): LocaleId | null => {
+  const p = new URLSearchParams(window.location.search);
+  const lang = p.get("lang");
+  return lang === "en" || lang === "zh-CN" ? lang : null;
+};
+const readPersistedLocale = (): LocaleId | null => {
+  const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  return stored === "en" || stored === "zh-CN" ? stored : null;
+};
+const resolveLocale = (): LocaleId => readLocaleOverride() || readPersistedLocale() || DEFAULT_LOCALE;
+const previewFromQuery = () => {
+  const p = new URLSearchParams(window.location.search);
+  return p.get("preview") === "1";
 };
 const routeFromHash = (): RouteId => { const hash = window.location.hash.replace("#", ""); return ROUTES.includes(hash as RouteId) ? (hash as RouteId) : "entry"; };
 const pickPlan = (goal: GoalId | null, equipment: EquipmentId[], intake: IntakeState): SessionPlan | null => {
@@ -89,9 +531,45 @@ const totalWorkSteps = (plan: SessionPlan | null) => plan ? plan.steps.filter((s
 const fmt = (s: number) => `${String(Math.floor(Math.max(0, s) / 60)).padStart(2, "0")}:${String(Math.max(0, s) % 60).padStart(2, "0")}`;
 const nextAction = (outcome: FeedbackOutcomeId): RecoveryActionId => outcome === "great" ? "continue_track" : outcome === "too_hard" ? "repeat_easier" : outcome === "need_review" ? "review_prep" : "contact_support";
 const toneClass = (tone: string) => tone === "positive" ? "feedback-card positive" : tone === "warning" ? "feedback-card warning" : tone === "caution" ? "feedback-card caution" : "feedback-card";
-const equipmentLabel = (id: EquipmentId) => id === "yoga_ball" ? "瑜伽球" : id === "resistance_band" ? "弹力带" : id === "yoga_mat" ? "瑜伽垫" : id === "dumbbell" ? "哑铃" : "无器材";
+const equipmentLabel = (id: EquipmentId, locale: LocaleId) => locale === "en" ? equipmentLabelEn[id] : id === "yoga_ball" ? "瑜伽球" : id === "resistance_band" ? "弹力带" : id === "yoga_mat" ? "瑜伽垫" : id === "dumbbell" ? "哑铃" : "无器材";
+const localizeGoals = (locale: LocaleId) => goals.map((item) => locale === "en" ? { ...item, ...goalCopyEn[item.id] } : item);
+const localizeEquipment = (locale: LocaleId) => equipmentOptions.map((item) => locale === "en" ? { ...item, ...equipmentCopyEn[item.id] } : item);
+const localizeExperience = (locale: LocaleId) => experienceOptions.map((item) => locale === "en" ? { ...item, title: experienceCopyEn[item.id] } : item);
+const localizeDuration = (locale: LocaleId) => durationOptions.map((item) => locale === "en" ? { ...item, ...durationCopyEn[item.id] } : item);
+const localizeDiscomfort = (locale: LocaleId) => discomfortOptions.map((item) => locale === "en" ? { ...item, title: discomfortCopyEn[item.id] } : item);
+const localizeIntensity = (locale: LocaleId) => intensityOptions.map((item) => locale === "en" ? { ...item, title: intensityCopyEn[item.id] } : item);
+const localizeFeedback = (locale: LocaleId) => feedbackOptions.map((item) => locale === "en" ? { ...item, ...feedbackCopyEn[item.id] } : item);
+const localizeNextSteps = (locale: LocaleId) => Object.fromEntries(
+  (Object.entries(nextStepCopy) as [RecoveryActionId, typeof nextStepCopy[RecoveryActionId]][]).map(([key, value]) => [key, locale === "en" ? { ...value, ...nextStepCopyEn[key] } : value])
+) as Record<RecoveryActionId, { title: string; detail: string; badge: string; icon: React.ReactNode }>;
+const localizePlan = (plan: SessionPlan | null, locale: LocaleId): SessionPlan | null => {
+  if (!plan || locale !== "en") return plan;
+  const copy = planCopyEn[plan.id];
+  if (!copy) return plan;
+  return {
+    ...plan,
+    title: copy.title,
+    why: copy.why,
+    safetyNote: copy.safetyNote,
+    prepChecklist: copy.prepChecklist,
+    summary: copy.summary,
+    steps: plan.steps.map((step) => ({ ...step, ...(copy.steps[step.id] || {}) }))
+  };
+};
 
-const MirrorMedia = memo(function MirrorMedia({ enabled, stream, status, variant = "card" }: { enabled: boolean; stream: MediaStream | null; status: "idle" | "loading" | "ready" | "error"; variant?: "card" | "session" }) {
+const MirrorMedia = memo(function MirrorMedia({
+  enabled,
+  stream,
+  status,
+  copy,
+  variant = "card"
+}: {
+  enabled: boolean;
+  stream: MediaStream | null;
+  status: "idle" | "loading" | "ready" | "error";
+  copy: typeof uiCopy["zh-CN"]["mirror"];
+  variant?: "card" | "session";
+}) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -124,19 +602,33 @@ const MirrorMedia = memo(function MirrorMedia({ enabled, stream, status, variant
 
   return enabled
     ? status === "error"
-      ? <div className={`mirror-empty ${variant}`}>摄像头权限不可用。你仍然可以继续标准跟练。</div>
+      ? <div className={`mirror-empty ${variant}`}>{copy.unavailable}</div>
       : <video ref={videoRef} className={`mirror-video ${variant}`} autoPlay muted playsInline />
-    : <div className={`mirror-empty ${variant}`}>在准备页开启镜像预览后，这里会显示你的实时动作画面。</div>;
+    : <div className={`mirror-empty ${variant}`}>{copy.intro}</div>;
 });
 
 MirrorMedia.displayName = "MirrorMedia";
 
-function MirrorPreview({ enabled, stream, status, variant = "card", overlay }: { enabled: boolean; stream: MediaStream | null; status: "idle" | "loading" | "ready" | "error"; variant?: "card" | "session"; overlay?: React.ReactNode }) {
-  const label = status === "ready" ? "已开启" : status === "loading" ? "启动中" : status === "error" ? "不可用" : "未开启";
+function MirrorPreview({
+  enabled,
+  stream,
+  status,
+  copy,
+  variant = "card",
+  overlay
+}: {
+  enabled: boolean;
+  stream: MediaStream | null;
+  status: "idle" | "loading" | "ready" | "error";
+  copy: typeof uiCopy["zh-CN"]["mirror"];
+  variant?: "card" | "session";
+  overlay?: React.ReactNode;
+}) {
+  const label = status === "ready" ? copy.statusReady : status === "loading" ? copy.statusLoading : status === "error" ? copy.statusError : copy.statusIdle;
   if (variant === "session") {
-    return <section className="mirror-stage"><div className="mirror-stage-media"><MirrorMedia enabled={enabled} stream={stream} status={status} variant="session" />{overlay}</div><div className="mirror-stage-foot"><span className={`status ${status}`}>{label}</span></div></section>;
+    return <section className="mirror-stage"><div className="mirror-stage-media"><MirrorMedia enabled={enabled} stream={stream} status={status} copy={copy} variant="session" />{overlay}</div><div className="mirror-stage-foot"><span className={`status ${status}`}>{label}</span></div></section>;
   }
-  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">辅助预览</span><h3>镜像预览</h3></div><span className={`status ${status}`}>{label}</span></div><MirrorMedia enabled={enabled} stream={stream} status={status} variant="card" /></section>;
+  return <section className="sub-card"><div className="sub-head"><div><span className="kicker">{copy.kicker}</span><h3>{copy.title}</h3></div><span className={`status ${status}`}>{label}</span></div><MirrorMedia enabled={enabled} stream={stream} status={status} copy={copy} variant="card" /></section>;
 }
 
 function ScreenWrap({ kicker, title, desc, children, compact = false, titleOnly = false }: { kicker?: string; title: string; desc: string; children: React.ReactNode; compact?: boolean; titleOnly?: boolean }) {
@@ -145,7 +637,9 @@ function ScreenWrap({ kicker, title, desc, children, compact = false, titleOnly 
 
 function App() {
   const context = contextFromQuery();
+  const previewMode = previewFromQuery();
   const [route, setRoute] = useState<RouteId>(routeFromHash);
+  const [locale, setLocale] = useState<LocaleId>(resolveLocale);
   const [goal, setGoal] = useState<GoalId | null>(null);
   const [equipment, setEquipment] = useState<EquipmentId[]>(context.productHint === "yoga-ball" ? ["yoga_ball"] : []);
   const [intake, setIntake] = useState<IntakeState>({ experience: null, duration: "12", discomfort: null, intensity: "steady" });
@@ -160,19 +654,122 @@ function App() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [enteredAt, setEnteredAt] = useState<Record<RouteId, number>>({ entry: Date.now(), goal: 0, equipment: 0, intake: 0, recommendation: 0, prep: 0, session: 0, feedback: 0, "next-step": 0 });
   const [sessionInterrupted, setSessionInterrupted] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
   const dropoutRef = useRef(false);
   const lastSpokenRef = useRef<string | null>(null);
   const mirrorStreamRef = useRef<MediaStream | null>(null);
+  const copy = uiCopy[locale];
+  const routeLabels = copy.routeLabel;
+  const localizedGoals = localizeGoals(locale);
+  const localizedEquipment = localizeEquipment(locale);
+  const localizedExperience = localizeExperience(locale);
+  const localizedDuration = localizeDuration(locale);
+  const localizedDiscomfort = localizeDiscomfort(locale);
+  const localizedIntensity = localizeIntensity(locale);
+  const localizedFeedback = localizeFeedback(locale);
+  const localizedNextSteps = localizeNextSteps(locale);
   const plan = pickPlan(goal, equipment, intake);
-  const currentStep = plan?.steps[stepIndex] || null;
+  const displayPlan = localizePlan(plan, locale);
+  const currentStep = displayPlan?.steps[stepIndex] || null;
   const completedWorkSteps = plan ? plan.steps.slice(0, stepIndex).filter((s) => s.type === "work").length : 0;
+  const editTargets: Array<"goal" | "equipment" | "intake"> = route === "recommendation" || route === "prep" ? ["goal", "equipment", "intake"] : [];
 
-  useEffect(() => { document.title = "Shifu"; }, []);
-  useEffect(() => { tracker.track("entry_open", { asin: context.asin, source: context.source, campaign: context.campaign, product_hint: context.productHint }); }, [context.asin, context.campaign, context.productHint, context.source]);
-  useEffect(() => { const nextHash = `#${route}`; if (window.location.hash !== nextHash) window.history.replaceState(null, "", nextHash); setEnteredAt((p) => ({ ...p, [route]: Date.now() })); }, [route]);
+  const resetResolvedState = () => {
+    setSessionStarted(false);
+    setSessionPaused(false);
+    setSessionInterrupted(false);
+    setStepIndex(0);
+    setRemainingSeconds(0);
+    setFeedback({ outcome: null, note: "" });
+    setNextStep({ action: null });
+  };
+
+  const ensurePreviewState = (targetRoute: RouteId) => {
+    if (!previewMode) return;
+    const needsPlan = ["recommendation", "prep", "session", "feedback", "next-step"].includes(targetRoute);
+    let nextGoal = goal;
+    let nextEquipment = equipment;
+    let nextIntake = intake;
+
+    if (needsPlan && !nextGoal) nextGoal = "posture_relief";
+    if (needsPlan && nextEquipment.length === 0) nextEquipment = context.productHint === "yoga-ball" ? ["yoga_ball"] : ["none"];
+    if (needsPlan) {
+      nextIntake = {
+        experience: nextIntake.experience || "beginner",
+        duration: nextIntake.duration || "12",
+        discomfort: nextIntake.discomfort || "upper_back",
+        intensity: nextIntake.intensity || "steady"
+      };
+    }
+
+    if (nextGoal !== goal) setGoal(nextGoal);
+    if (nextEquipment !== equipment) setEquipment(nextEquipment);
+    if (nextIntake !== intake) setIntake(nextIntake);
+
+    const seededPlan = pickPlan(nextGoal, nextEquipment, nextIntake);
+
+    if (targetRoute === "session" && seededPlan && !sessionStarted) {
+      setSessionStarted(true);
+      setSessionPaused(false);
+      setSessionInterrupted(false);
+      setStepIndex(0);
+      setRemainingSeconds(seededPlan.steps[0]?.durationSec || 0);
+    }
+
+    if (targetRoute !== "session" && sessionStarted) {
+      setSessionStarted(false);
+      setSessionPaused(false);
+      setStepIndex(0);
+      setRemainingSeconds(0);
+    }
+
+    if ((targetRoute === "feedback" || targetRoute === "next-step") && !feedback.outcome) {
+      setFeedback({ outcome: "great", note: "" });
+    }
+
+    if (targetRoute !== "feedback" && targetRoute !== "next-step" && (feedback.outcome || feedback.note)) {
+      setFeedback({ outcome: null, note: "" });
+    }
+
+    if (targetRoute === "next-step" && !nextStep.action) {
+      setNextStep({ action: nextAction(feedback.outcome || "great") });
+    }
+
+    if (targetRoute !== "next-step" && nextStep.action) {
+      setNextStep({ action: null });
+    }
+  };
+
+  useEffect(() => { document.title = locale === "en" ? "Shifu Training" : "Shifu"; }, [locale]);
+  useEffect(() => {
+    tracker.track("entry_open", { asin: context.asin, source: context.source, campaign: context.campaign, product_hint: context.productHint, preview_mode: previewMode, locale });
+  }, [context.asin, context.campaign, context.productHint, context.source, locale, previewMode]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("lang", locale);
+    const nextHash = `#${route}`;
+    const nextUrl = `${window.location.pathname}?${params.toString()}${nextHash}`;
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== nextUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    setEnteredAt((p) => ({ ...p, [route]: Date.now() }));
+  }, [locale, route]);
   useEffect(() => { const onHash = () => setRoute(routeFromHash()); window.addEventListener("hashchange", onHash); return () => window.removeEventListener("hashchange", onHash); }, []);
   useEffect(() => { if (!sessionStarted || sessionPaused || !currentStep) return; const timer = window.setInterval(() => setRemainingSeconds((n) => { if (n <= 1) { window.clearInterval(timer); completeStep(); return 0; } return n - 1; }), 1000); return () => window.clearInterval(timer); }, [currentStep, sessionPaused, sessionStarted]);
-  useEffect(() => { if (!voiceEnabled || !sessionStarted || !currentStep) return; if (lastSpokenRef.current === currentStep.id) return; lastSpokenRef.current = currentStep.id; tracker.track("voice_prompt_use", { route, enabled: true, step_id: currentStep.id }); if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(`${currentStep.type === "rest" ? "休息" : "开始"}，${currentStep.title}`); u.lang = "zh-CN"; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } }, [currentStep, route, sessionStarted, voiceEnabled]);
+  useEffect(() => {
+    if (!voiceEnabled || !sessionStarted || !currentStep) return;
+    if (lastSpokenRef.current === currentStep.id) return;
+    lastSpokenRef.current = currentStep.id;
+    tracker.track("voice_prompt_use", { route, enabled: true, step_id: currentStep.id, locale });
+    if ("speechSynthesis" in window) {
+      const prefix = currentStep.type === "rest" ? copy.voicePrompt.rest : copy.voicePrompt.start;
+      const u = new SpeechSynthesisUtterance(`${prefix}，${currentStep.title}`);
+      u.lang = locale;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+  }, [copy.voicePrompt.rest, copy.voicePrompt.start, currentStep, locale, route, sessionStarted, voiceEnabled]);
   useEffect(() => {
     if (mirrorEnabled) return;
     setMirrorStatus("idle");
@@ -197,6 +794,8 @@ function App() {
       mirrorStreamRef.current = null;
     }
   }, []);
+  useEffect(() => { if (previewMode) ensurePreviewState(route); }, [previewMode, route]);
+  useEffect(() => { setControlsOpen(false); }, [route]);
   useEffect(() => { if (mirrorEnabled) tracker.track("mirror_mode_use", { route, enabled: true }); }, [mirrorEnabled, route]);
   useEffect(() => { const onHide = () => { if (dropoutRef.current || route === "entry" || route === "next-step") return; tracker.track("flow_exit", { route, duration_ms: Date.now() - (enteredAt[route] || Date.now()), goal, equipment: equipment.join(",") || null, session_started: sessionStarted, session_interrupted: sessionInterrupted }); dropoutRef.current = true; }; window.addEventListener("pagehide", onHide); return () => window.removeEventListener("pagehide", onHide); }, [enteredAt, equipment, goal, route, sessionInterrupted, sessionStarted]);
 
@@ -208,6 +807,20 @@ function App() {
   const goTo = (r: RouteId) => setRoute(r);
   const goBack = () => { if (route === "goal") return goTo("entry"); if (route === "equipment") return goTo("goal"); if (route === "intake") return goTo("equipment"); if (route === "recommendation") return goTo("intake"); if (route === "prep") return goTo("recommendation"); if (route === "session") return goTo("prep"); if (route === "feedback") return goTo("session"); if (route === "next-step") return goTo("feedback"); };
   const toggleEquipment = (id: EquipmentId) => setEquipment((curr) => { if (id === "none") return curr.includes("none") ? [] : ["none"]; const list = curr.filter((x) => x !== "none"); return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]; });
+  const returnHome = () => {
+    const needsConfirm = route === "session" || route === "feedback" || route === "next-step";
+    if (needsConfirm && !window.confirm(copy.confirmLeaveActive)) return;
+    resetResolvedState();
+    goTo("entry");
+  };
+  const toggleLocale = () => {
+    setLocale((current) => current === "zh-CN" ? "en" : "zh-CN");
+    setControlsOpen(false);
+  };
+  const jumpToEdit = (target: "goal" | "equipment" | "intake") => {
+    setControlsOpen(false);
+    goTo(target);
+  };
   const ensureMirrorStream = async () => {
     const currentTrack = mirrorStreamRef.current?.getVideoTracks()[0];
     if (mirrorStreamRef.current && mirrorStreamRef.current.active && currentTrack?.readyState === "live") {
@@ -262,7 +875,7 @@ function App() {
     if (!plan) return;
     setSessionInterrupted(true); setSessionStarted(false); setSessionPaused(true);
     tracker.track("session_interrupt", { plan_id: plan.id, step_id: currentStep?.id || null, step_index: stepIndex });
-    setFeedback({ outcome: "stopped_early", note: "训练中途结束，需要更轻或更明确的下一步。" });
+    setFeedback({ outcome: "stopped_early", note: locale === "en" ? "I ended the session early and need a lighter or clearer next step." : "训练中途结束，需要更轻或更明确的下一步。" });
     goTo("feedback");
   };
 
@@ -285,20 +898,57 @@ function App() {
     if (route === "feedback" && feedback.outcome) { const action = nextAction(feedback.outcome); setNextStep({ action }); tracker.track("session_feedback", { plan_id: plan?.id || null, outcome: feedback.outcome, note_present: feedback.note.trim().length > 0 }); tracker.track("next_step_route", { action, plan_id: plan?.id || null }); return goTo("next-step"); }
   };
 
-  const footerLabel = route === "entry" ? "开始训练设置" : route === "recommendation" ? "使用这套方案" : route === "prep" ? "开始跟练" : route === "feedback" ? "生成下一步" : route === "next-step" ? "保留当前建议" : "继续";
+  const footerLabel = copy.footerByRoute[route] || copy.footerDefault;
+  const editActionRow = editTargets.length
+    ? <div className="inline-action-row">{editTargets.map((target) => <button key={target} type="button" className="inline-action" data-testid={`edit-${target}`} onClick={() => jumpToEdit(target)}>{copy.editRoute[target]}</button>)}</div>
+    : null;
+  const controlCenter = controlsOpen
+    ? <div className="control-center" data-testid="control-center">
+        <div className="control-center-head">
+          <div className="copy">
+            <strong>{copy.control.title}</strong>
+            <span>{previewMode ? copy.control.previewHint : copy.control.homeHint}</span>
+          </div>
+          {previewMode ? <span className="tag top">{copy.control.preview}</span> : null}
+        </div>
+        <div className="control-group">
+          <span className="kicker">{copy.control.language}</span>
+          <div className="control-grid two-up">
+            <button type="button" className={`control-pill ${locale === "zh-CN" ? "selected" : ""}`} data-testid="locale-zh" onClick={() => { setLocale("zh-CN"); setControlsOpen(false); }}>{copy.control.zh}</button>
+            <button type="button" className={`control-pill ${locale === "en" ? "selected" : ""}`} data-testid="locale-en" onClick={() => { setLocale("en"); setControlsOpen(false); }}>{copy.control.en}</button>
+          </div>
+        </div>
+        {route !== "entry" ? <div className="control-group">
+          <span className="kicker">{copy.control.title}</span>
+          <div className="control-grid">
+            <button type="button" className="control-action" data-testid="control-home" onClick={returnHome}>{copy.control.home}</button>
+          </div>
+        </div> : null}
+        {editTargets.length ? <div className="control-group">
+          <span className="kicker">{copy.control.edit}</span>
+          <div className="control-grid">{editTargets.map((target) => <button key={target} type="button" className="control-action" data-testid={`control-edit-${target}`} onClick={() => jumpToEdit(target)}>{copy.editRoute[target]}</button>)}</div>
+        </div> : null}
+        {previewMode ? <div className="control-group">
+          <span className="kicker">{copy.control.preview}</span>
+          <div className="control-grid preview-grid">
+            {PREVIEW_ROUTES.map((previewRoute) => <button key={previewRoute} type="button" className={`control-pill ${route === previewRoute ? "selected" : ""}`} data-testid={`preview-route-${previewRoute}`} onClick={() => { ensurePreviewState(previewRoute); goTo(previewRoute); setControlsOpen(false); }}>{routeLabels[previewRoute]}</button>)}
+          </div>
+        </div> : null}
+      </div>
+    : null;
 
   let body: React.ReactNode = null;
-  if (route === "entry") body = <ScreenWrap title="今天的问题？" desc="" titleOnly><div className="hero-card compact-hero"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>20 秒完成设置</h3><p>选目标、器材和状态，马上开始跟练。</p></div></div></ScreenWrap>;
-  if (route === "goal") body = <ScreenWrap kicker="目标选择" title="先选今天目标" desc="先聚焦一个方向，我再给你方案。" compact titleOnly><div className="choice-grid">{goals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
-  if (route === "equipment") body = <ScreenWrap kicker="器材确认" title="选择可用器材" desc="可多选，先勾选你手边有的。" compact titleOnly><div className="choice-grid equipment-grid">{equipmentOptions.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}>{item.priority ? <span className="tag card-tag">优先</span> : null}<span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
-  if (route === "intake") body = <ScreenWrap kicker="快速确认" title="20 秒确认状态" desc="补全 4 项信息，我会给你更稳的方案。" compact titleOnly><div className="q"><h3>训练经验</h3><div className="pill-list">{experienceOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>今天能练多久</h3><div className="pill-list">{durationOptions.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>今天最想注意哪里</h3><div className="pill-list">{discomfortOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>希望从什么强度开始</h3><div className="pill-list">{intensityOptions.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
-  if (route === "recommendation") body = <ScreenWrap kicker="推荐结果" title={plan ? plan.title : "暂时还没匹配到方案"} desc={plan ? plan.why : "请回到上一步补充目标、器材或状态信息。"} titleOnly>{plan ? <div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">预计时长</span><strong><Clock3 size={14} />{plan.estimatedMinutes} 分钟</strong></div><div className="recommendation-metric"><span className="metric-label">建议器材</span><strong>{equipmentLabel(plan.primaryEquipment)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">训练结构</span><div className="summary-list">{plan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>开始前提醒</strong><span>{plan.safetyNote}</span></div></div></div> : <div className="sub-card"><p>当前没有符合条件的训练计划。</p></div>}</ScreenWrap>;
-  if (route === "prep") body = <ScreenWrap kicker="开始前" title="开始前准备" desc="这里只保留真正影响开始训练的内容：准备清单、语音、镜像预览。" titleOnly>{plan ? <><section className="sub-card"><div className="sub-head"><div><span className="kicker">准备清单</span><h3>先确认这 3 件事</h3></div></div><ul className="list">{plan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul></section><section className="sub-card support-card"><div className="sub-head"><div><span className="kicker">运行支持</span><h3>按你的习惯打开辅助功能</h3></div></div><button type="button" className={`toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="copy"><strong>语音播报</strong><span>首次训练建议开启，减少盯屏负担。</span></div><span className="state">{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? "已开启" : "已关闭"}</span></button><button type="button" className={`toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="copy"><strong>镜像预览</strong><span>跟练开始后自动打开前置摄像头。</span></div><span className="state"><MonitorSmartphone size={16} />{mirrorEnabled ? "已开启" : "未开启"}</span></button></section></> : null}</ScreenWrap>;
-  if (route === "session") body = <ScreenWrap kicker="跟练中" title={currentStep ? currentStep.title : "跟练中"} desc={currentStep ? currentStep.cue : ""} compact titleOnly>{plan && currentStep ? mirrorEnabled ? <div className="session-layout session-layout-mirror"><MirrorPreview enabled={mirrorEnabled} stream={mirrorStreamRef.current} status={mirrorStatus} variant="session" overlay={<div className="session-overlay"><div className="session-overlay-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="session-overlay-timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="session-overlay-bottom"><p>{currentStep.cue}</p><div className="progress large overlay-progress"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div></div></div>} /><section className="sub-card runtime runtime-compact"><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions compact-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />结束</button></div></section></div> : <section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? "休息" : "动作进行中"}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} 个动作完成</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? "恢复时间" : "当前动作倒计时"}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>本次训练进度</span><span>{plan.estimatedMinutes} 分钟计划</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? "继续" : "暂停"}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />下一步</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />提前结束</button></div></section> : null}</ScreenWrap>;
-  if (route === "feedback") body = <ScreenWrap kicker="训练反馈" title="这轮感觉如何？" desc="只要告诉我结果是否合适，我就能给出下一步建议。" titleOnly><div className="stack">{feedbackOptions.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder="如果想补充哪里不确定、哪里不舒服，可以简单写一句。" value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
-  if (route === "next-step") body = <ScreenWrap kicker="下一步" title="下一步建议" desc="训练闭环不是结束，而是给你一个明确可继续的动作。" titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{nextStepCopy[nextStep.action].title}</h3><p>{nextStepCopy[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(nextStepCopy) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{nextStepCopy[action].badge}</span><div className="icon">{nextStepCopy[action].icon}</div><div className="copy"><strong>{nextStepCopy[action].title}</strong><p>{nextStepCopy[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
+  if (route === "entry") body = <ScreenWrap title={copy.entry.title} desc="" titleOnly><div className="hero-card compact-hero"><div className="hero-icon"><Sparkles size={24} /></div><div className="hero-copy"><h3>{copy.entry.heroTitle}</h3><p>{copy.entry.heroDesc}</p></div></div></ScreenWrap>;
+  if (route === "goal") body = <ScreenWrap kicker={copy.goal.kicker} title={copy.goal.title} desc={copy.goal.desc} compact titleOnly><div className="choice-grid">{localizedGoals.map((item) => <button key={item.id} type="button" className={`card goal-card ${goal === item.id ? "selected" : ""}`} onClick={() => setGoal(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.subtitle}</span></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
+  if (route === "equipment") body = <ScreenWrap kicker={copy.equipment.kicker} title={copy.equipment.title} desc={copy.equipment.desc} compact><div className="choice-grid equipment-grid">{localizedEquipment.map((item) => <button key={item.id} type="button" className={`card equipment-card ${equipment.includes(item.id) ? "selected" : ""}`} onClick={() => toggleEquipment(item.id)}><span className="icon">{item.icon}</span><div className="copy"><strong>{item.title}</strong><span>{item.detail}</span></div><div className="equipment-card-side">{item.priority ? <span className="tag card-tag">{copy.equipment.priority}</span> : null}<CheckCircle2 size={18} className="check" /></div></button>)}</div></ScreenWrap>;
+  if (route === "intake") body = <ScreenWrap kicker={copy.intake.kicker} title={copy.intake.title} desc={copy.intake.desc} compact titleOnly><div className="q"><h3>{copy.intake.labels.experience}</h3><div className="pill-list">{localizedExperience.map((o) => <button key={o.id} type="button" className={`pill ${intake.experience === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, experience: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.duration}</h3><div className="pill-list">{localizedDuration.map((o) => <button key={o.id} type="button" className={`pill detail ${intake.duration === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, duration: o.id }))}><strong>{o.title}</strong><span>{o.detail}</span></button>)}</div></div><div className="q"><h3>{copy.intake.labels.discomfort}</h3><div className="pill-list">{localizedDiscomfort.map((o) => <button key={o.id} type="button" className={`pill ${intake.discomfort === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, discomfort: o.id }))}>{o.title}</button>)}</div></div><div className="q"><h3>{copy.intake.labels.intensity}</h3><div className="pill-list">{localizedIntensity.map((o) => <button key={o.id} type="button" className={`pill ${intake.intensity === o.id ? "selected" : ""}`} onClick={() => setIntake((s) => ({ ...s, intensity: o.id }))}>{o.title}</button>)}</div></div></ScreenWrap>;
+  if (route === "recommendation") body = <ScreenWrap kicker={copy.recommendation.kicker} title={displayPlan ? displayPlan.title : copy.recommendation.emptyTitle} desc={displayPlan ? displayPlan.why : copy.recommendation.emptyDesc} titleOnly>{displayPlan ? <><div className="recommendation-inline">{editActionRow}<p>{copy.recommendation.editHint}</p></div><div className="sub-card recommendation-card"><div className="recommendation-metrics"><div className="recommendation-metric"><span className="metric-label">{copy.recommendation.estimated}</span><strong><Clock3 size={14} />{displayPlan.estimatedMinutes} {locale === "en" ? "min" : "分钟"}</strong></div><div className="recommendation-metric"><span className="metric-label">{copy.recommendation.equipment}</span><strong>{equipmentLabel(displayPlan.primaryEquipment, locale)}</strong></div></div><div className="recommendation-summary"><span className="metric-label">{copy.recommendation.summary}</span><div className="summary-list">{displayPlan.summary.map((x) => <span key={x} className="summary-pill">{x}</span>)}</div></div><div className="note recommendation-note"><ShieldCheck size={16} /><div className="note-copy"><strong>{copy.recommendation.safetyTitle}</strong><span>{displayPlan.safetyNote}</span></div></div></div></> : <div className="sub-card"><p>{copy.recommendation.emptyBody}</p></div>}</ScreenWrap>;
+  if (route === "prep") body = <ScreenWrap kicker={copy.prep.kicker} title={copy.prep.title} desc={copy.prep.desc} titleOnly>{displayPlan ? <><div className="recommendation-inline">{editActionRow}<p>{copy.prep.editHint}</p></div><section className="sub-card prep-hero"><div className="prep-hero-copy"><span className="kicker">{copy.prep.heroKicker}</span><h3>{copy.prep.heroTitle}</h3><p>{copy.prep.heroDesc}</p></div><ul className="list prep-list">{displayPlan.prepChecklist.map((item) => <li key={item}><CheckCircle2 size={16} /><span>{item}</span></li>)}</ul><div className="prep-support-head"><span className="kicker">{copy.prep.supportKicker}</span><p>{copy.prep.supportDesc}</p></div><div className="prep-support-grid"><button type="button" className={`support-toggle ${voiceEnabled ? "active" : ""}`} onClick={() => setVoiceEnabled((v) => !v)}><div className="support-toggle-main"><div className="support-toggle-title"><strong>{copy.prep.voiceTitle}</strong><span>{voiceEnabled ? copy.prep.voiceOn : copy.prep.voiceOff}</span></div><span className={`state ${voiceEnabled ? "ready" : ""}`}>{voiceEnabled ? <Mic size={16} /> : <MicOff size={16} />}{voiceEnabled ? copy.prep.enabled : copy.prep.disabled}</span></div></button><button type="button" className={`support-toggle ${mirrorEnabled ? "active" : ""}`} onClick={() => setMirrorEnabled((v) => !v)}><div className="support-toggle-main"><div className="support-toggle-title"><strong>{copy.prep.mirrorTitle}</strong><span>{mirrorEnabled ? copy.prep.mirrorOn : copy.prep.mirrorOff}</span></div><span className={`state ${mirrorEnabled ? "ready" : ""}`}><MonitorSmartphone size={16} />{mirrorEnabled ? copy.prep.enabled : copy.prep.disabled}</span></div></button></div></section></> : null}</ScreenWrap>;
+  if (route === "session") body = <ScreenWrap kicker={copy.session.kicker} title={currentStep ? currentStep.title : copy.session.kicker} desc={currentStep ? currentStep.cue : ""} compact titleOnly>{plan && currentStep ? mirrorEnabled ? <div className="session-layout session-layout-mirror"><MirrorPreview enabled={mirrorEnabled} stream={mirrorStreamRef.current} status={mirrorStatus} copy={copy.mirror} variant="session" overlay={<div className="session-overlay"><div className="session-overlay-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? copy.session.rest : copy.session.work}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} {copy.session.completeCount}</span></div><div className="session-overlay-timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? copy.session.recoverTime : copy.session.currentCountdown}</span></div><div className="session-overlay-bottom"><p>{currentStep.cue}</p><div className="progress large overlay-progress"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div></div></div>} /><section className="sub-card runtime runtime-compact"><div className="meta"><span>{copy.session.progress}</span><span>{plan.estimatedMinutes} {copy.session.planMinutes}</span></div><div className="session-actions compact-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? copy.session.resume : copy.session.pause}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />{copy.session.next}</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />{copy.session.finish}</button></div></section></div> : <section className="sub-card runtime"><div className="runtime-top"><span className={`badge ${currentStep.type}`}>{currentStep.type === "rest" ? copy.session.rest : copy.session.work}</span><span className="badge muted">{completedWorkSteps}/{totalWorkSteps(plan)} {copy.session.completeCount}</span></div><div className="timer"><div className="time">{fmt(remainingSeconds)}</div><span>{currentStep.type === "rest" ? copy.session.recoverTime : copy.session.currentCountdown}</span></div><div className="progress large"><div className="bar" style={{ width: `${Math.min(sessionProgress * 100, 100)}%` }} /></div><div className="meta"><span>{copy.session.progress}</span><span>{plan.estimatedMinutes} {copy.session.planMinutes}</span></div><div className="session-actions"><button type="button" className="secondary" onClick={() => setSessionPaused((v) => !v)}>{sessionPaused ? <Play size={16} /> : <Pause size={16} />}{sessionPaused ? copy.session.resume : copy.session.pause}</button><button type="button" className="primary inline" onClick={completeStep}><ArrowRight size={16} />{copy.session.next}</button><button type="button" className="ghost danger" onClick={exitSession}><XCircle size={16} />{copy.session.endEarly}</button></div></section> : null}</ScreenWrap>;
+  if (route === "feedback") body = <ScreenWrap kicker={copy.feedback.kicker} title={copy.feedback.title} desc={copy.feedback.desc} titleOnly><div className="stack">{localizedFeedback.map((item) => <button key={item.id} type="button" className={`${toneClass(item.tone)} ${feedback.outcome === item.id ? "selected" : ""}`} onClick={() => setFeedback((s) => ({ ...s, outcome: item.id }))}><div className="icon semantic">{item.icon}</div><div className="copy"><strong>{item.title}</strong><p>{item.detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div><textarea className="note-input" placeholder={copy.feedback.notePlaceholder} value={feedback.note} onChange={(e) => setFeedback((s) => ({ ...s, note: e.target.value }))} /></ScreenWrap>;
+  if (route === "next-step") body = <ScreenWrap kicker={copy.nextStep.kicker} title={copy.nextStep.title} desc={copy.nextStep.desc} titleOnly>{nextStep.action ? <div className="hero-card success"><div className="hero-icon success"><CheckCircle2 size={24} /></div><div className="hero-copy"><h3>{localizedNextSteps[nextStep.action].title}</h3><p>{localizedNextSteps[nextStep.action].detail}</p></div></div> : null}<div className="stack">{(Object.keys(localizedNextSteps) as RecoveryActionId[]).map((action) => <button key={action} type="button" className={`card action-card ${nextStep.action === action ? "selected" : ""}`} onClick={() => { setNextStep({ action }); tracker.track("next_step_route", { action, explicit_choice: true }); }}><span className="tag top">{localizedNextSteps[action].badge}</span><div className="icon">{localizedNextSteps[action].icon}</div><div className="copy"><strong>{localizedNextSteps[action].title}</strong><p>{localizedNextSteps[action].detail}</p></div><CheckCircle2 size={18} className="check" /></button>)}</div></ScreenWrap>;
 
-  return <><style>{styles}</style><div className="app-bg"><div className="phone-shell"><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{ROUTE_LABEL[route]}</strong></div><span className="topbar-aside">{route === "session" ? "跟练中" : `${routeIndex + 1}/${ROUTES.length}`}</span></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div></header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>返回</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
+  return <><style>{styles}</style><div className="app-bg"><div className={`phone-shell route-${route} ${previewMode ? "preview-mode" : ""}`} data-preview={previewMode ? "true" : "false"}><header className="topbar"><div className="topbar-row"><div className="topbar-copy"><span className="brand">Shifu</span><strong>{routeLabels[route]}</strong></div><div className="topbar-tools"><span className="topbar-aside">{route === "session" ? copy.topbarActive : `${routeIndex + 1}/${ROUTES.length}`}</span>{route !== "entry" || previewMode ? <button className={`topbar-control topbar-utility ${controlsOpen ? "active" : ""}`} type="button" data-testid="control-center-toggle" aria-label={copy.control.toggle} onClick={() => setControlsOpen((v) => !v)}><SlidersHorizontal size={15} /></button> : null}<button className="topbar-control locale-switch" type="button" data-testid="locale-toggle" aria-label={copy.control.language} onClick={toggleLocale}>{locale === "en" ? "EN" : "中"}</button></div></div><div className="progress"><div className="bar" style={{ width: `${Math.min(progress * 100, 100)}%` }} /></div>{controlCenter}</header><main className="main">{body}</main>{route !== "session" ? <footer className="footer"><div className={`footer-actions ${route !== "entry" ? "with-back" : ""}`}>{route !== "entry" ? <button className="secondary footer-back" type="button" onClick={goBack}><span>{copy.footerBack}</span></button> : null}<button className={`primary footer-btn ${canContinue ? "" : "disabled"}`} type="button" onClick={nextFlow} disabled={!canContinue}><span>{footerLabel}</span><ArrowRight size={16} /></button></div></footer> : null}</div></div></>;
 }
 
 const styles = `
@@ -306,9 +956,13 @@ const styles = `
   color-scheme: light;
   --bg: #f8f9fa;
   --surface: #fff;
-  --soft: #f3f4f5;
-  --tint: #edeeef;
-  --line: rgba(25, 28, 29, 0.08);
+  --surface-2: #f4f6f5;
+  --surface-3: #eef2f0;
+  --soft: #f4f5f4;
+  --tint: #eef1ef;
+  --line: rgba(25, 28, 29, 0.05);
+  --hairline: rgba(17, 24, 39, 0.05);
+  --hairline-strong: rgba(17, 24, 39, 0.09);
   --text: #191c1d;
   --muted: #44474e;
   --muted2: #74777f;
@@ -317,8 +971,8 @@ const styles = `
   --selected-ring: rgba(0, 110, 36, 0.24);
   --selected-fill: rgba(80, 255, 113, 0.12);
   --selected-shadow: rgba(0, 110, 36, 0.08);
-  --shadow: 0 18px 60px rgba(17, 24, 39, 0.09);
-  --shadow2: 0 10px 26px rgba(17, 24, 39, 0.06);
+  --shadow: 0 20px 56px rgba(17, 24, 39, 0.06);
+  --shadow2: 0 10px 24px rgba(17, 24, 39, 0.045);
 }
 
 * {
@@ -356,38 +1010,85 @@ button {
   min-height: 100dvh;
   display: flex;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.app-bg::before,
+.app-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(16px);
+  opacity: 0.7;
+}
+
+.app-bg::before {
+  width: 54vw;
+  height: 54vw;
+  top: -14vw;
+  left: -18vw;
+  background: radial-gradient(circle, rgba(80, 255, 113, 0.14) 0%, rgba(80, 255, 113, 0.03) 56%, rgba(80, 255, 113, 0) 72%);
+}
+
+.app-bg::after {
+  width: 46vw;
+  height: 46vw;
+  right: -14vw;
+  bottom: 10vh;
+  background: radial-gradient(circle, rgba(17, 24, 39, 0.08) 0%, rgba(17, 24, 39, 0.02) 54%, rgba(17, 24, 39, 0) 74%);
 }
 
 .phone-shell {
   width: min(100%, 430px);
   min-height: 100dvh;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 249, 0.94) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 249, 0.95) 100%);
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.phone-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 180px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
 }
 
 .topbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  padding: calc(18px + env(safe-area-inset-top)) 18px 14px;
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
+  padding: calc(18px + env(safe-area-inset-top)) 20px 12px;
+  background: rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.035);
 }
 
 .topbar-row {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.topbar-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .topbar-copy {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 
 .brand {
@@ -401,8 +1102,8 @@ button {
 
 .topbar-copy strong {
   font-family: "Lexend", sans-serif;
-  font-size: 1.15rem;
-  letter-spacing: -0.03em;
+  font-size: 1.08rem;
+  letter-spacing: -0.035em;
 }
 
 .topbar-aside,
@@ -420,25 +1121,62 @@ button {
   font-weight: 700;
 }
 
+.topbar-control {
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.topbar-utility {
+  min-width: 32px;
+  padding: 0;
+}
+
+.locale-switch {
+  letter-spacing: 0.01em;
+}
+
+.topbar-control.active {
+  background: rgba(80, 255, 113, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(13, 138, 67, 0.18);
+}
+
 .topbar-aside,
 .chip,
 .status,
 .badge.muted {
-  background: var(--soft);
+  background: rgba(255, 255, 255, 0.7);
   color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+.topbar-aside {
+  min-width: 52px;
+  justify-content: center;
 }
 
 .progress,
 .large {
   width: 100%;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
-  background: rgba(17, 24, 39, 0.07);
+  background: rgba(17, 24, 39, 0.06);
   overflow: hidden;
 }
 
 .large {
-  height: 10px;
+  height: 9px;
 }
 
 .bar {
@@ -449,7 +1187,7 @@ button {
 
 .main {
   flex: 1;
-  padding: 18px 18px calc(112px + env(safe-area-inset-bottom));
+  padding: 24px 20px calc(120px + env(safe-area-inset-bottom));
 }
 
 .screen,
@@ -458,29 +1196,29 @@ button {
 .copy,
 .hero-copy {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .screen-header {
-  gap: 10px;
-}
-
-.screen.compact-screen {
   gap: 12px;
 }
 
+.screen.compact-screen {
+  gap: 16px;
+}
+
 .screen-header.compact {
-  gap: 8px;
+  gap: 10px;
 }
 
 .screen-header.title-only {
-  gap: 0;
+  gap: 2px;
 }
 
 .kicker {
   font-family: "Lexend", sans-serif;
-  font-size: 0.76rem;
-  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--secondary);
   font-weight: 700;
@@ -489,19 +1227,19 @@ button {
 .screen-header h2 {
   margin: 0;
   font-family: "Lexend", sans-serif;
-  font-size: clamp(1.95rem, 7vw, 2.65rem);
-  line-height: 0.96;
+  font-size: clamp(2.2rem, 8vw, 3.15rem);
+  line-height: 0.92;
   letter-spacing: -0.06em;
 }
 
 .screen-header.compact h2 {
-  font-size: clamp(1.7rem, 6vw, 2.15rem);
-  line-height: 0.98;
+  font-size: clamp(1.95rem, 6.5vw, 2.4rem);
+  line-height: 0.94;
   letter-spacing: -0.05em;
 }
 
 .screen-header.title-only h2 {
-  font-size: clamp(1.72rem, 6.1vw, 2.18rem);
+  font-size: clamp(2rem, 6.8vw, 2.55rem);
 }
 
 .screen-header p,
@@ -512,14 +1250,14 @@ button {
 .mirror-empty {
   margin: 0;
   color: var(--muted);
-  line-height: 1.6;
-  font-size: 0.94rem;
+  line-height: 1.58;
+  font-size: 0.96rem;
 }
 
 .screen-header.compact p {
-  font-size: 0.9rem;
-  line-height: 1.5;
-  max-width: 24rem;
+  font-size: 0.92rem;
+  line-height: 1.52;
+  max-width: 22rem;
 }
 
 .hero-card,
@@ -529,21 +1267,21 @@ button {
 .feedback-card,
 .pill.detail {
   background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow2);
+  border: 0;
+  box-shadow: var(--shadow2), inset 0 0 0 1px rgba(17, 24, 39, 0.04);
 }
 
 .hero-card {
   display: grid;
   grid-template-columns: 48px 1fr;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, #fff 0%, var(--tint) 100%);
+  gap: 16px;
+  padding: 22px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #ffffff 0%, rgba(238, 241, 239, 0.92) 100%);
 }
 
 .compact-hero {
-  padding: 16px 18px;
+  padding: 22px;
 }
 
 .hero-card.success {
@@ -552,13 +1290,13 @@ button {
 
 .hero-icon,
 .icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.06);
   color: var(--primary);
   transition: background 160ms ease, color 160ms ease;
 }
@@ -578,11 +1316,12 @@ button {
 
 .choice-grid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .equipment-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .mini-grid,
@@ -608,14 +1347,14 @@ button {
 
 .mini-card,
 .sub-card {
-  padding: 16px;
-  border-radius: 18px;
+  padding: 18px;
+  border-radius: 22px;
 }
 
 .recommendation-card {
   display: grid;
-  gap: 14px;
-  padding: 18px;
+  gap: 18px;
+  padding: 20px;
 }
 
 .recommendation-metrics {
@@ -627,10 +1366,11 @@ button {
 .recommendation-metric,
 .recommendation-summary {
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(244, 246, 245, 0.92);
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .recommendation-metric strong {
@@ -638,14 +1378,14 @@ button {
   align-items: center;
   gap: 6px;
   font-family: "Lexend", sans-serif;
-  font-size: 1rem;
+  font-size: 1.08rem;
   letter-spacing: -0.02em;
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   line-height: 1.2;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted2);
   font-weight: 700;
@@ -667,11 +1407,11 @@ button {
   min-height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface-2);
   color: var(--primary);
   font-size: 0.88rem;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.06);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .mini-card strong,
@@ -680,20 +1420,20 @@ button {
 .sub-card h3 {
   margin: 0;
   font-family: "Lexend", sans-serif;
-  font-size: 1.02rem;
-  letter-spacing: -0.02em;
+  font-size: 1.08rem;
+  letter-spacing: -0.03em;
 }
 
 .card,
 .feedback-card {
   width: 100%;
   text-align: left;
-  padding: 16px;
-  border-radius: 20px;
+  padding: 18px;
+  border-radius: 24px;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
-  align-items: start;
+  gap: 16px;
+  align-items: center;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
   position: relative;
@@ -701,46 +1441,56 @@ button {
 }
 
 .goal-card {
-  min-height: 92px;
+  min-height: 104px;
 }
 
 .goal-card .copy {
-  gap: 4px;
+  gap: 6px;
 }
 
 .equipment-card {
-  grid-template-columns: 1fr;
-  align-content: space-between;
-  justify-items: start;
-  min-height: 148px;
-  aspect-ratio: 1 / 1;
-  padding: 16px;
+  grid-template-columns: 44px 1fr auto;
+  align-content: center;
+  justify-items: stretch;
+  min-height: 96px;
+  aspect-ratio: auto;
+  padding: 16px 18px;
   border-radius: 22px;
+  gap: 14px;
 }
 
 .equipment-card .icon {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .equipment-card .copy {
-  gap: 6px;
-  width: 100%;
+  gap: 4px;
+  width: auto;
 }
 
 .equipment-card .copy strong {
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .equipment-card .copy span {
-  font-size: 0.82rem;
-  line-height: 1.4;
+  font-size: 0.88rem;
+  line-height: 1.42;
+}
+
+.equipment-card-side {
+  display: grid;
+  justify-items: end;
+  align-content: space-between;
+  gap: 10px;
+  min-height: 100%;
 }
 
 .equipment-card .check {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+  position: static;
+  align-self: start;
+  justify-self: end;
 }
 
 .card:hover,
@@ -750,21 +1500,19 @@ button {
 .primary:hover,
 .secondary:hover,
 .ghost:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .card.selected,
 .pill.selected,
 .toggle.active {
   background: linear-gradient(180deg, #fff 0%, var(--selected-fill) 100%);
-  border-color: var(--selected-ring);
-  box-shadow: 0 12px 28px var(--selected-shadow), inset 0 0 0 1px rgba(13, 138, 67, 0.24);
+  box-shadow: 0 14px 30px var(--selected-shadow), inset 0 0 0 1px rgba(13, 138, 67, 0.24);
 }
 
 .feedback-card.selected {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(26, 213, 103, 0.12) 100%);
-  border-color: var(--selected-ring);
-  box-shadow: 0 12px 28px var(--selected-shadow), inset 0 0 0 1px rgba(13, 138, 67, 0.24);
+  box-shadow: 0 14px 30px var(--selected-shadow), inset 0 0 0 1px rgba(13, 138, 67, 0.24);
 }
 
 .card.selected .icon,
@@ -792,8 +1540,9 @@ button {
 
 .copy span {
   color: var(--muted2);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 600;
+  line-height: 1.45;
 }
 
 .semantic {
@@ -802,7 +1551,7 @@ button {
 
 .check {
   color: rgba(13, 138, 67, 0.22);
-  opacity: 0.35;
+  opacity: 0.24;
   transform: scale(0.92);
   transition: color 160ms ease, opacity 160ms ease, transform 160ms ease;
 }
@@ -814,8 +1563,9 @@ button {
 }
 
 .tag {
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(15, 23, 42, 0.05);
   color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .tag.top {
@@ -841,31 +1591,32 @@ button {
 
 .q {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--line);
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .q h3 {
   margin: 0;
   font-family: "Lexend", sans-serif;
-  font-size: 1rem;
-  letter-spacing: -0.02em;
+  font-size: 1.02rem;
+  letter-spacing: -0.03em;
 }
 
 .pill {
   width: 100%;
-  min-height: 48px;
-  border-radius: 16px;
-  padding: 14px 16px;
-  background: var(--soft);
+  min-height: 52px;
+  border-radius: 18px;
+  padding: 15px 16px;
+  background: rgba(244, 246, 245, 0.9);
   color: var(--text);
   text-align: left;
   cursor: pointer;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
-  border: 1px solid transparent;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 .pill.detail {
@@ -883,7 +1634,7 @@ button {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 14px 15px;
+  padding: 15px 16px;
   border-radius: 18px;
   background: rgba(13, 138, 67, 0.08);
   color: var(--primary);
@@ -892,6 +1643,34 @@ button {
 
 .recommendation-note {
   margin-top: 2px;
+}
+
+.recommendation-inline {
+  display: grid;
+  gap: 10px;
+}
+
+.recommendation-inline p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.inline-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inline-action {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  cursor: pointer;
 }
 
 .note-copy {
@@ -944,16 +1723,104 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px;
-  border-radius: 18px;
-  background: var(--soft);
-  border: 1px solid transparent;
+  padding: 16px 17px;
+  border-radius: 20px;
+  background: rgba(244, 246, 245, 0.92);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--hairline);
   cursor: pointer;
 }
 
 .support-card {
   display: grid;
-  gap: 16px;
+  gap: 12px;
+}
+
+.prep-hero {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 248, 246, 0.92) 100%);
+}
+
+.prep-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.prep-hero-copy h3 {
+  font-size: 1.28rem;
+  letter-spacing: -0.04em;
+}
+
+.prep-hero-copy p,
+.prep-support-head p,
+.support-toggle-title span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.52;
+}
+
+.prep-list {
+  gap: 14px;
+}
+
+.prep-list li {
+  gap: 12px;
+}
+
+.prep-list span {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.prep-support-head {
+  display: grid;
+  gap: 6px;
+}
+
+.prep-support-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.support-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.support-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.support-toggle.active {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(80, 255, 113, 0.08) 100%);
+  box-shadow: 0 10px 22px rgba(13, 138, 67, 0.08), inset 0 0 0 1px rgba(13, 138, 67, 0.18);
+}
+
+.support-toggle-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.support-toggle-title {
+  display: grid;
+  gap: 4px;
+}
+
+.support-toggle-title strong {
+  margin: 0;
+  font-family: "Lexend", sans-serif;
+  font-size: 1.02rem;
+  letter-spacing: -0.03em;
 }
 
 .state {
@@ -966,7 +1833,8 @@ button {
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--muted);
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 0 0 1px var(--hairline);
   white-space: nowrap;
 }
 
@@ -993,7 +1861,7 @@ button {
   border-radius: 22px;
   padding: 28px 20px;
   background: linear-gradient(180deg, #f8fbf9 0%, #eef7f1 100%);
-  border: 1px solid rgba(13, 138, 67, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(13, 138, 67, 0.12);
   display: grid;
   justify-items: center;
   gap: 10px;
@@ -1013,8 +1881,8 @@ button {
 }
 
 .runtime-compact {
-  padding: 14px 16px 16px;
-  gap: 12px;
+  padding: 16px 18px 18px;
+  gap: 14px;
 }
 
 .compact-actions {
@@ -1031,16 +1899,16 @@ button {
 
 .mirror-stage {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .mirror-stage-media {
   position: relative;
   min-height: min(54dvh, 460px);
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
   background: #101314;
-  box-shadow: var(--shadow2);
+  box-shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
 }
 
 .mirror-stage-foot {
@@ -1052,7 +1920,7 @@ button {
 .mirror-empty.session {
   min-height: min(54dvh, 460px);
   height: 100%;
-  border-radius: 24px;
+  border-radius: 28px;
   background: linear-gradient(180deg, #1b1f20 0%, #303536 100%);
 }
 
@@ -1061,8 +1929,8 @@ button {
   inset: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 14px;
-  padding: 16px;
+  gap: 16px;
+  padding: 18px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.04) 36%, rgba(0, 0, 0, 0.52) 100%);
   pointer-events: none;
 }
@@ -1088,7 +1956,7 @@ button {
   min-width: min(72vw, 260px);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(12px);
   color: #fff;
 }
@@ -1117,9 +1985,9 @@ button {
 .secondary,
 .ghost {
   width: 100%;
-  min-height: 54px;
+  min-height: 56px;
   padding: 14px 18px;
-  border-radius: 18px;
+  border-radius: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1129,9 +1997,9 @@ button {
 }
 
 .primary {
-  background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #000000 0%, #1b232b 100%);
   color: #fff;
-  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
   font-weight: 700;
 }
 
@@ -1142,15 +2010,16 @@ button {
 }
 
 .secondary {
-  background: var(--soft);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--hairline);
   font-weight: 700;
 }
 
 .ghost {
   background: rgba(255, 255, 255, 0.74);
   color: var(--primary);
-  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(17, 24, 39, 0.1);
   font-weight: 700;
 }
 
@@ -1189,26 +2058,26 @@ button {
   min-height: 108px;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--surface);
   color: var(--text);
   resize: vertical;
-  box-shadow: var(--shadow2);
+  box-shadow: var(--shadow2), inset 0 0 0 1px rgba(17, 24, 39, 0.06);
 }
 
 .note-input:focus {
   outline: none;
-  border-color: rgba(13, 138, 67, 0.34);
-  box-shadow: 0 10px 24px rgba(13, 138, 67, 0.07), inset 0 0 0 1px rgba(13, 138, 67, 0.2);
+  box-shadow: 0 10px 24px rgba(13, 138, 67, 0.07), inset 0 0 0 2px rgba(13, 138, 67, 0.2);
 }
 
 .footer {
   position: sticky;
   bottom: 0;
   z-index: 9;
-  padding: 10px 18px calc(14px + env(safe-area-inset-bottom));
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 28%, rgba(255, 255, 255, 0.98) 100%);
   backdrop-filter: blur(18px);
+  box-shadow: 0 -14px 30px rgba(17, 24, 39, 0.03);
 }
 
 .footer-actions {
@@ -1231,6 +2100,69 @@ button {
   border-radius: 20px;
 }
 
+.control-center {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow2), inset 0 0 0 1px rgba(17, 24, 39, 0.05);
+}
+
+.control-center-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.control-center-head .copy {
+  gap: 4px;
+}
+
+.control-center-head strong {
+  font-family: "Lexend", sans-serif;
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.control-group {
+  display: grid;
+  gap: 8px;
+}
+
+.control-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.control-grid.two-up {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preview-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.control-pill,
+.control-action {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: rgba(244, 246, 245, 0.92);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  cursor: pointer;
+  text-align: center;
+}
+
+.control-pill.selected {
+  background: var(--selected-fill);
+  box-shadow: 0 8px 18px var(--selected-shadow), inset 0 0 0 1px rgba(13, 138, 67, 0.18);
+  color: var(--secondary);
+}
+
 .status.ready {
   background: rgba(13, 138, 67, 0.12);
   color: var(--secondary);
@@ -1250,7 +2182,7 @@ button {
 .mirror-empty {
   width: 100%;
   min-height: 220px;
-  border-radius: 18px;
+  border-radius: 22px;
   background: linear-gradient(180deg, #f4f6f5 0%, #ebefed 100%);
   overflow: hidden;
 }
@@ -1265,6 +2197,112 @@ button {
   place-items: center;
   padding: 20px;
   text-align: center;
+}
+
+.route-entry .topbar-aside {
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted2);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.route-entry .screen {
+  gap: 18px;
+}
+
+.route-entry .screen-header h2 {
+  max-width: 10ch;
+}
+
+.route-entry .hero-card {
+  min-height: 184px;
+  grid-template-columns: 56px 1fr;
+  align-content: space-between;
+}
+
+.route-entry .hero-copy h3 {
+  font-size: 1.24rem;
+  letter-spacing: -0.04em;
+}
+
+.route-entry .hero-copy p {
+  max-width: 18rem;
+}
+
+.route-goal .screen-header,
+.route-equipment .screen-header,
+.route-feedback .screen-header,
+.route-next-step .screen-header {
+  max-width: 20rem;
+}
+
+.route-equipment .screen {
+  gap: 12px;
+}
+
+.route-equipment .screen-header {
+  gap: 8px;
+}
+
+.route-equipment .screen-header h2 {
+  font-size: clamp(1.8rem, 5.6vw, 2.2rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+}
+
+.route-equipment .screen-header p {
+  max-width: 18.5rem;
+  font-size: 0.92rem;
+}
+
+.route-goal .card,
+.route-feedback .feedback-card,
+.route-next-step .action-card {
+  min-height: 108px;
+}
+
+.route-equipment .card-tag {
+  position: static;
+  justify-self: end;
+  align-self: start;
+  margin-left: auto;
+  min-height: 24px;
+  padding: 0 9px;
+}
+
+.route-intake .screen {
+  gap: 14px;
+}
+
+.route-prep .sub-card,
+.route-recommendation .sub-card,
+.route-session .sub-card {
+  border-radius: 24px;
+}
+
+.route-prep .screen-header {
+  max-width: 18rem;
+}
+
+.route-prep .screen {
+  gap: 16px;
+}
+
+.route-feedback .stack,
+.route-next-step .stack {
+  gap: 14px;
+}
+
+.route-session .screen-header {
+  gap: 8px;
+}
+
+.route-session .screen-header h2 {
+  font-size: clamp(1.8rem, 6vw, 2.24rem);
 }
 
 @media (min-width: 431px) {
